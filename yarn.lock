@@ -121,7 +121,7 @@
     tslib "^2.7.0"
     viem "^2.21.44"
 
-"@civic/auth@0.4.5":
+"@civic/auth@0.4.5", "@civic/auth@^0.4.5":
   version "0.4.5"
   resolved "https://registry.yarnpkg.com/@civic/auth/-/auth-0.4.5.tgz#952b2036fe7097bc46dba1563570aa3556516f48"
   integrity sha512-wsNMm+8QSKaCH+G6T9Wr3keYyybFKr0SHxPThgTF1W2rEOo2qk8RY4FbpvkQozW+edDYU2WHlga2UstJ9hnLrg==

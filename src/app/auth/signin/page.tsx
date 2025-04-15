@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -13,11 +13,33 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
+  // Clear all local session data on mount to prevent authentication mismatches
+  useEffect(() => {
+    // Clear all civic auth-related data from local storage
+    const cookiesToClear = Object.keys(localStorage).filter(key => 
+      key.startsWith('civic') || 
+      key.includes('auth') || 
+      key.includes('session')
+    );
+    
+    cookiesToClear.forEach(key => {
+      console.log(`Clearing potential stale auth data: ${key}`);
+      localStorage.removeItem(key);
+    });
+    
+    // Clear any session storage items that might be related to auth
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.includes('civic') || key.includes('auth') || key.includes('session')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  }, []);
+
   // Redirect if already authenticated
   if (user) {
     router.push('/dashboard');
     return null;
-    }
+  }
 
   return (
     <div className="container flex h-screen items-center justify-center">
