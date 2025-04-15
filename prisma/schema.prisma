@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int                 @id @default(autoincrement())
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  hashedPin         String?
+  email             String?             @unique
+  firstName         String?
+  middleName        String?
+  lastName          String?
+  assignedGAddress  String?
+  passkeyCAddress   String?
+  passkeyKey        String?
+  phone             String?             @unique
+  AuthSession       AuthSession[]
+  HostedDeposits    HostedDeposits[]
+  HostedWithdrawals HostedWithdrawals[]
+  KYC               KYC[]
+  OTPVerification   OTPVerification?
+  transfers         Transfer[]          @relation("UserTransfers")
+
+  @@index([phone], map: "phone_idx")
+  @@index([email], map: "email_idx")
+  @@index([assignedGAddress], map: "assigned_g_address_idx")
+  @@index([passkeyCAddress], map: "passkey_c_address_idx")
+}
+
+model AuthSession {
+  id                Int                 @id @default(autoincrement())
+  userId            Int
+  token             String?
+  publicKey         String
+  expiresAt         DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  user              User                @relation(fields: [userId], references: [id])
+  HostedDeposits    HostedDeposits[]
+  HostedWithdrawals HostedWithdrawals[]
+  KYC               KYC[]
+
+  @@index([userId], map: "user_idx")
+}
+
+model KYC {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  authSessionId Int
+  status        String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sep12Id       String?
+  authSession   AuthSession @relation(fields: [authSessionId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "kyc_user_idx")
+}
+
+model HostedDeposits {
+  id               Int          @id @default(autoincrement())
+  userId           Int
+  amount           Decimal
+  destinationAsset String
+  sourceAsset      String
+  type             String
+  transferId       String
+  authSessionId    Int?
+  sep6Id           String?
+  AuthSession      AuthSession? @relation(fields: [authSessionId], references: [id])
+  transfer         Transfer     @relation(fields: [transferId], references: [id])
+  user             User         @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "hosted_deposits_user_idx")
+  @@index([transferId], map: "hosted_deposits_transfer_idx")
+}
+
+model HostedWithdrawals {
+  id               Int          @id @default(autoincrement())
+  userId           Int
+  amount           Decimal
+  destinationAsset String
+  sourceAsset      String
+  type             String
+  account_number   String
+  roting_number    String
+  transferId       String
+  authSessionId    Int?
+  sep6Id           String?
+  AuthSession      AuthSession? @relation(fields: [authSessionId], references: [id])
+  transfer         Transfer     @relation(fields: [transferId], references: [id])
+  user             User         @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "hosted_withdrawals_user_idx")
+  @@index([transferId], map: "hosted_withdrawals_transfer_idx")
+}
+
+model Transfer {
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  id                     String              @id @default(cuid())
+  amount                 Decimal
+  currency               Currency
+  currencyType           CurrencyType
+  senderId               Int?
+  status                 TransferStatus      @default(PENDING)
+  recipientPhone         String
+  recipientName          String
+  recipientCountry       String?
+  senderAuthSessionId    Int?
+  receiverAuthSessionId  Int?
+  recipientAddress       String?
+  recipientBankName      String?
+  recipientBankAddress   String?
+  recipientAccountNumber String?
+  recipientIBAN          String?
+  recipientSWIFTBIC      String?
+  recipientRoutingNumber String?
+  recipientTransitNumber String?
+  recipientSortCode      String?
+  recipientCLABE         String?
+  oTPVerificationId      Int?
+  HostedDeposits         HostedDeposits[]
+  HostedWithdrawals      HostedWithdrawals[]
+  OTPVerification        OTPVerification?    @relation(fields: [oTPVerificationId], references: [id])
+  sender                 User?               @relation("UserTransfers", fields: [senderId], references: [id])
+
+  @@index([senderId], map: "sender_idx")
+  @@index([senderAuthSessionId], map: "sender_auth_session_idx")
+  @@index([receiverAuthSessionId], map: "receiver_auth_session_idx")
+}
+
+model OTPVerification {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  otpCode   String
+  expiresAt DateTime
+  verified  Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
+  Transfer  Transfer[]
+}
+
+model Waitlist {
+  id        Int      @id @default(autoincrement())
+  contact   String
+  name      String
+  isEmail   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum Currency {
+  USD
+  EUR
+  GBP
+  MXN
+}
+
+enum CurrencyType {
+  FIAT
+}
