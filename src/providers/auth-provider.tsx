@@ -92,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Get client ID from a client-safe source
   const civicClientId = typeof window !== 'undefined' 
-    ? process.env.NEXT_PUBLIC_CIVIC_CLIENT_ID || ''
+    ? env.NEXT_PUBLIC_CIVIC_CLIENT_ID || ''
     : '';
 
   // Function to fetch the latest user data from server if needed
