@@ -18,7 +18,7 @@ import { env } from "~/env";
 import { api } from "~/trpc/server";
 
 // Helper type guard to check if user has a Solana wallet
-function userHasWallet(userContext: any): userContext is any & { 
+function userHasWallet(userContext: any): userContext is { 
   solana: { address: string; wallet: any } 
 } {
   return userContext && 
