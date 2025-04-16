@@ -13,18 +13,16 @@ import {
   Eye,
   EyeOff,
   Landmark,
-  Mail,
   Wallet,
   Leaf,
   Receipt,
   CreditCard,
-  Banknote,
+  Copy,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
-import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import { shortStellarAddress } from "~/lib/utils";
+import { shortSolanaAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -59,64 +57,13 @@ const transactions: Transaction[] = [
   },
 ];
 
-// Define interface for Solana wallet from Civic Auth
-interface SolanaWallet {
-  address: string;
-  wallet?: any;
-}
-
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
-  const { user: userContext } = useUser();
+  const { user, logout, solanaWalletAddress } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  
-  // Extract Solana wallet address from Civic Auth context
-  useEffect(() => {
-    // Check if userContext has the solana property with an address
-    if (userContext && 
-        'solana' in userContext && 
-        userContext.solana && 
-        typeof userContext.solana === 'object') {
-      
-      // Type assertion to access the address property safely
-      // @ts-ignore - We know the structure of the solana object from Civic Auth
-      const solanaWallet = userContext.solana;
-      
-      // @ts-ignore - We know the solana object has an address property
-      if (solanaWallet.address) {
-        // @ts-ignore - We know the solana object has an address property
-        console.log("SOLANA WALLET ADDRESS FROM CIVIC:", solanaWallet.address);
-        // @ts-ignore - We know the solana object has an address property
-        setWalletAddress(solanaWallet.address);
-        
-        // Update user data with Solana wallet address if we have a user
-        if (user) {
-          try {
-            const userData = localStorage.getItem("auth_user");
-            if (userData) {
-              const localUser = JSON.parse(userData);
-              // @ts-ignore - We know the solana object has an address property
-              if (localUser.walletAddress !== solanaWallet.address) {
-                // @ts-ignore - We know the solana object has an address property
-                localUser.walletAddress = solanaWallet.address;
-                localStorage.setItem("auth_user", JSON.stringify(localUser));
-              }
-            }
-          } catch (error) {
-            console.error("Error updating wallet address in localStorage:", error);
-          }
-        }
-      }
-    } else if (solanaWalletAddress) {
-      // Fallback to the solanaWalletAddress from the auth context
-      setWalletAddress(solanaWalletAddress);
-    }
-  }, [userContext, user, solanaWalletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -144,26 +91,33 @@ function DashboardContent() {
       : `$${amount.toLocaleString()}`;
   };
 
+  const copyWalletAddress = () => {
+    if (solanaWalletAddress) {
+      navigator.clipboard.writeText(solanaWalletAddress);
+      toast.success("Wallet address copied to clipboard");
+    }
+  };
+
   // Navigation handlers
   const handleReceive = () => {
-    if (walletAddress) {
-      router.push(`/wallet/${walletAddress}/receive`);
+    if (solanaWalletAddress) {
+      router.push(`/wallet/${solanaWalletAddress}/receive`);
     } else {
       router.push("/receive");
     }
   };
 
   const handleSend = () => {
-    if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/send`);
+    if (solanaWalletAddress) {
+      router.push(`/dashboard/${solanaWalletAddress}/send`);
     } else {
       toast.error("No wallet address found");
     }
   };
 
   const handlePayBills = () => {
-    if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/bills`);
+    if (solanaWalletAddress) {
+      router.push(`/dashboard/${solanaWalletAddress}/bills`);
     } else {
       toast.error("No wallet address found");
     }
@@ -174,16 +128,16 @@ function DashboardContent() {
   };
 
   const handleInvestments = () => {
-    if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/investments`);
+    if (solanaWalletAddress) {
+      router.push(`/dashboard/${solanaWalletAddress}/investments`);
     } else {
       toast.error("No wallet address found");
     }
   };
 
   const handleWallet = () => {
-    if (walletAddress) {
-      router.push(`/wallet/${walletAddress}`);
+    if (solanaWalletAddress) {
+      router.push(`/wallet/${solanaWalletAddress}`);
     } else {
       router.push("/wallet");
     }
@@ -221,43 +175,12 @@ function DashboardContent() {
       </div>
 
       <div className="grid gap-4">
-        {/* Wallet Address Card - New */}
-        {walletAddress && (
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base font-semibold">Solana Wallet</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Wallet className="h-5 w-5 text-purple-500 mr-2" />
-                  <div>
-                    <p className="font-medium font-mono text-sm">{shortStellarAddress(walletAddress, 6)}</p>
-                    <p className="text-xs text-gray-500">Solana Address</p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(walletAddress);
-                    toast.success("Address copied to clipboard");
-                  }}
-                  className="h-8"
-                >
-                  Copy
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Balance Card */}
         <Card>
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">Balance</CardTitle>
             <Button variant="ghost" size="icon" onClick={toggleBalanceVisibility}>
-                {showBalance ? (
+              {showBalance ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
                 <Eye className="h-4 w-4" />
@@ -268,6 +191,23 @@ function DashboardContent() {
             <div className="text-3xl font-bold">
               {showBalance ? formatCurrency(balance) : "********"}
             </div>
+            
+            {/* Wallet Address */}
+            {solanaWalletAddress && (
+              <div className="mt-2 flex items-center text-sm text-gray-500">
+                <Wallet className="h-3 w-3 mr-1" />
+                <span>{shortSolanaAddress(solanaWalletAddress)}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5 ml-1"
+                  onClick={copyWalletAddress}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            
             <div className="mt-4 grid grid-cols-4 gap-3">
               <Button
                 onClick={handleReceive}
@@ -277,15 +217,15 @@ function DashboardContent() {
                 <ArrowDown className="h-4 w-4 mb-1" />
                 Receive
               </Button>
-            <Button 
+              <Button 
                 onClick={handleSend}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
+                variant="outline" 
               >
                 <ArrowUp className="h-4 w-4 mb-1" />
-              Send
-            </Button>
-            <Button 
+                Send
+              </Button>
+              <Button 
                 onClick={handleWallet}
                 className="flex flex-col items-center h-auto py-2 text-xs"
                 variant="outline"
@@ -296,11 +236,11 @@ function DashboardContent() {
               <Button
                 onClick={handlePayBills}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
-            >
+                variant="outline" 
+              >
                 <Receipt className="h-4 w-4 mb-1" />
                 Bills
-            </Button>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -320,7 +260,7 @@ function DashboardContent() {
                     <p className="font-medium">Earn 8%</p>
                     <p className="text-xs text-gray-500">Sustainable funds</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   onClick={handleInvestments}
@@ -328,9 +268,9 @@ function DashboardContent() {
                 >
                   <ArrowUpRight className="h-4 w-4 mr-1" /> Invest
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Banking Card */}
           <Card>
@@ -345,7 +285,7 @@ function DashboardContent() {
                     <p className="font-medium">Connect Bank</p>
                     <p className="text-xs text-gray-500">Fast transfers</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   variant="outline"
@@ -354,10 +294,10 @@ function DashboardContent() {
                 >
                   Connect
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
-            </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Chart */}
         <Card>
@@ -380,7 +320,7 @@ function DashboardContent() {
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="sent">Sent</TabsTrigger>
                 <TabsTrigger value="received">Received</TabsTrigger>
-        </TabsList>
+              </TabsList>
               <TabsContent value="all">
                 <div className="space-y-4">
                   {transactions.map((transaction) => (
@@ -432,9 +372,9 @@ function DashboardContent() {
                         {formatCurrency(transaction.amount)}
                       </div>
                     </div>
-              ))}
-            </div>
-        </TabsContent>
+                  ))}
+                </div>
+              </TabsContent>
               <TabsContent value="sent">
                 <div className="space-y-4">
                   {transactions
@@ -454,8 +394,8 @@ function DashboardContent() {
                             </p>
                             <p className="text-xs text-gray-500">
                               {transaction.date}
-                </p>
-              </div>
+                            </p>
+                          </div>
                         </div>
                         <div className="text-sm font-semibold text-red-500">
                           -{formatCurrency(transaction.amount)}
@@ -483,19 +423,19 @@ function DashboardContent() {
                             </p>
                             <p className="text-xs text-gray-500">
                               {transaction.date}
-                  </p>
-                </div>
-              </div>
+                            </p>
+                          </div>
+                        </div>
                         <div className="text-sm font-semibold text-green-500">
                           +{formatCurrency(transaction.amount)}
-                </div>
-                </div>
+                        </div>
+                      </div>
                     ))}
                 </div>
               </TabsContent>
             </Tabs>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

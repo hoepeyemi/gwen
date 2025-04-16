@@ -48,6 +48,16 @@ export function shortStellarAddress(
   );
 }
 
+export function shortSolanaAddress(
+  longAddress?: string | null,
+  charsToShow = 4,
+): string {
+  if (!longAddress) return "";
+  return (
+    longAddress.slice(0, charsToShow) + "..." + longAddress.slice(-charsToShow)
+  );
+}
+
 export function copyToClipboard(text: string, silence = false) {
   navigator.clipboard
     .writeText(text)
