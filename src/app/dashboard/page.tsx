@@ -21,8 +21,10 @@ import {
   Banknote,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
+import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
+import { shortStellarAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -57,59 +59,64 @@ const transactions: Transaction[] = [
   },
 ];
 
+// Define interface for Solana wallet from Civic Auth
+interface SolanaWallet {
+  address: string;
+  wallet?: any;
+}
+
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData } = useAuth();
+  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
+  const { user: userContext } = useUser();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   
-  // Initialize wallet address from localStorage only on client side
+  // Extract Solana wallet address from Civic Auth context
   useEffect(() => {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
-          setWalletAddress(user.walletAddress);
-        }
-        }
-      } catch (error) {
-        console.error("Error initializing wallet address from localStorage:", error);
-      }
-  }, []);
-  
-  // Generate wallet address if needed (only on client, after first render)
-  useEffect(() => {
-    const ensureWalletAddress = () => {
-      if (walletAddress) return true; // Already have a wallet address
+    // Check if userContext has the solana property with an address
+    if (userContext && 
+        'solana' in userContext && 
+        userContext.solana && 
+        typeof userContext.solana === 'object') {
       
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const localUser = JSON.parse(userData);
-          if (!localUser.walletAddress) {
-            // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-            localUser.walletAddress = newAddress;
-            localStorage.setItem("auth_user", JSON.stringify(localUser));
-            console.log("WALLET ADDRESS GENERATION:", newAddress);
-            setWalletAddress(newAddress);
-            return true;
+      // Type assertion to access the address property safely
+      // @ts-ignore - We know the structure of the solana object from Civic Auth
+      const solanaWallet = userContext.solana;
+      
+      // @ts-ignore - We know the solana object has an address property
+      if (solanaWallet.address) {
+        // @ts-ignore - We know the solana object has an address property
+        console.log("SOLANA WALLET ADDRESS FROM CIVIC:", solanaWallet.address);
+        // @ts-ignore - We know the solana object has an address property
+        setWalletAddress(solanaWallet.address);
+        
+        // Update user data with Solana wallet address if we have a user
+        if (user) {
+          try {
+            const userData = localStorage.getItem("auth_user");
+            if (userData) {
+              const localUser = JSON.parse(userData);
+              // @ts-ignore - We know the solana object has an address property
+              if (localUser.walletAddress !== solanaWallet.address) {
+                // @ts-ignore - We know the solana object has an address property
+                localUser.walletAddress = solanaWallet.address;
+                localStorage.setItem("auth_user", JSON.stringify(localUser));
+              }
+            }
+          } catch (error) {
+            console.error("Error updating wallet address in localStorage:", error);
           }
         }
-        return false;
-      } catch (error) {
-        console.error("Error ensuring wallet address:", error);
-        return false;
       }
-    };
-
-    ensureWalletAddress();
-  }, [walletAddress]);
+    } else if (solanaWalletAddress) {
+      // Fallback to the solanaWalletAddress from the auth context
+      setWalletAddress(solanaWalletAddress);
+    }
+  }, [userContext, user, solanaWalletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -141,7 +148,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-              } else {
+    } else {
       router.push("/receive");
     }
   };
@@ -169,7 +176,7 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-            } else {
+    } else {
       toast.error("No wallet address found");
     }
   };
@@ -211,9 +218,40 @@ function DashboardContent() {
         <div className="flex items-center">
           <UserButton />
         </div>
-        </div>
+      </div>
 
       <div className="grid gap-4">
+        {/* Wallet Address Card - New */}
+        {walletAddress && (
+          <Card>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base font-semibold">Solana Wallet</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Wallet className="h-5 w-5 text-purple-500 mr-2" />
+                  <div>
+                    <p className="font-medium font-mono text-sm">{shortStellarAddress(walletAddress, 6)}</p>
+                    <p className="text-xs text-gray-500">Solana Address</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(walletAddress);
+                    toast.success("Address copied to clipboard");
+                  }}
+                  className="h-8"
+                >
+                  Copy
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Balance Card */}
         <Card>
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
