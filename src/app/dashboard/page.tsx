@@ -65,6 +65,46 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
+  
+  // Auto-redirect to personalized dashboard if we land on the generic dashboard
+  useEffect(() => {
+    if (redirectAttempted) return;
+    
+    const checkWalletAddressAndRedirect = () => {
+      try {
+        console.log("[DASHBOARD] Checking for wallet address to redirect...");
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.walletAddress) {
+            console.log(`[DASHBOARD] Found wallet address: ${parsedUser.walletAddress}, redirecting to personalized dashboard`);
+            setRedirectAttempted(true);
+            router.replace(`/dashboard/${parsedUser.walletAddress}`);
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error("[DASHBOARD] Error checking wallet address:", error);
+        return false;
+      }
+    };
+    
+    // Try to redirect if possible
+    checkWalletAddressAndRedirect();
+    
+    // Also set up a small delay to try again in case auth data isn't immediately available
+    const redirectTimeout = setTimeout(() => {
+      if (!redirectAttempted) {
+        checkWalletAddressAndRedirect();
+      }
+    }, 500);
+    
+    return () => {
+      clearTimeout(redirectTimeout);
+    };
+  }, [router, redirectAttempted]);
   
   // Initialize wallet address from localStorage only on client side
   useEffect(() => {
