@@ -87,6 +87,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const { user: userContext, isLoading: civicLoading } = useUser();
+  const civicUser = userContext?.user;
+
   // Get client ID from a client-safe source
   const civicClientId = typeof window !== 'undefined' 
     ? process.env.NEXT_PUBLIC_CIVIC_CLIENT_ID || '3fb12e4d-dde9-48d3-b510-62783dae555a'
@@ -288,65 +291,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
       };
 
       createAndSyncWallet();
-    }, [userContext, civicLoading]);
+    }, [userContext?.user, civicLoading]);
 
     return null;
   };
 
-  // Sync Civic Auth user with our local user state
-  const CivicUserSync = () => {
-    const { user: userContext, isLoading: civicLoading } = useUser();
-    const civicUser = userContext?.user;
 
-    useEffect(() => {
-      if (!civicLoading && civicUser) {
-        // Try to preserve existing hashedPin from localStorage if it exists
-        let existingHashedPin = null;
-        let existingWalletAddress = solanaWalletAddress;
+  useEffect(() => {
+    if (!civicLoading && civicUser) {
+      // Try to preserve existing hashedPin from localStorage if it exists
+      let existingHashedPin = null;
+      let existingWalletAddress = solanaWalletAddress;
 
-        try {
-          const storedUser = localStorage.getItem("auth_user");
-          if (storedUser) {
-            const userData = JSON.parse(storedUser);
-            existingHashedPin = userData.hashedPin || null;
-            
-            // If we don't have a wallet address yet, try to get it from storage
-            if (!existingWalletAddress) {
-              existingWalletAddress = userData.walletAddress || null;
-            }
+      try {
+        const storedUser = localStorage.getItem("auth_user");
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          existingHashedPin = userData.hashedPin || null;
+          
+          // If we don't have a wallet address yet, try to get it from storage
+          if (!existingWalletAddress) {
+            existingWalletAddress = userData.walletAddress || null;
           }
-        } catch (error) {
-          console.error("Error reading existing user data:", error);
         }
-
-        // Update our user state with Civic user data
-        const userData: User = {
-          id: parseInt(civicUser.id || '0'),
-          email: civicUser.email || null,
-          firstName: civicUser.name ? civicUser.name.split(' ')[0] : null,
-          lastName: civicUser.name ? civicUser.name.split(' ').slice(1).join(' ') : null,
-          name: civicUser.name || null,
-          walletAddress: existingWalletAddress || null,
-          hashedPin: existingHashedPin,
-        };
-
-        // Store in local storage
-        localStorage.setItem("auth_user", JSON.stringify(userData));
-        
-        // Update state
-        setUser(userData);
-        setIsLoading(false);
+      } catch (error) {
+        console.error("Error reading existing user data:", error);
       }
-    }, [civicUser, civicLoading, solanaWalletAddress]);
 
-    return null;
-  };
+      // Update our user state with Civic user data
+      const userData: User = {
+        id: parseInt(civicUser.id || '0'),
+        email: civicUser.email || null,
+        firstName: civicUser.name ? civicUser.name.split(' ')[0] : null,
+        lastName: civicUser.name ? civicUser.name.split(' ').slice(1).join(' ') : null,
+        name: civicUser.name || null,
+        walletAddress: existingWalletAddress || null,
+        hashedPin: existingHashedPin,
+      };
+
+      // Store in local storage
+      localStorage.setItem("auth_user", JSON.stringify(userData));
+      
+      // Update state
+      setUser(userData);
+      setIsLoading(false);
+    }
+  }, [civicUser, civicLoading, solanaWalletAddress]);
 
   return (
     <CivicProvider clientId={civicClientId}>
       <UserContextProvider>
         <SolanaWalletManager />
-        <CivicUserSync />
         <AuthContext.Provider value={{ 
           user, 
           isLoading, 
