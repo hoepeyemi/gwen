@@ -20,6 +20,23 @@ export default function SignUp() {
     
     redirectInProgress.current = true;
     console.log("Redirecting to dashboard");
+    
+    try {
+      // Check if we have a wallet address in localStorage
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser.walletAddress) {
+          console.log(`Redirecting to user's wallet dashboard: ${parsedUser.walletAddress}`);
+          router.push(`/dashboard/${parsedUser.walletAddress}`);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error getting user wallet address:", error);
+    }
+    
+    // Fallback to the main dashboard if no wallet address found
     router.push('/dashboard');
   };
   
