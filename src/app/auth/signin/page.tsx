@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -12,6 +12,24 @@ export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const redirectInProgress = useRef(false);
+
+  // Function to handle redirect to dashboard
+  const redirectToDashboard = () => {
+    if (redirectInProgress.current) return;
+    
+    redirectInProgress.current = true;
+    console.log("Redirecting to dashboard");
+    router.push('/dashboard');
+  };
+
+  // Function to handle Civic auth success
+  const handleAuthSuccess = () => {
+    console.log("Auth success callback triggered");
+    setTimeout(() => {
+      redirectToDashboard();
+    }, 500);
+  };
 
   // Clear all local session data on mount to prevent authentication mismatches
   useEffect(() => {
@@ -35,9 +53,55 @@ export default function SignIn() {
     });
   }, []);
 
-  // Redirect if already authenticated
-  if (user) {
-    router.push('/dashboard');
+  // Enhanced redirect effect to actively monitor auth status
+  useEffect(() => {
+    if (user && !redirectInProgress.current) {
+      console.log("User authenticated, redirecting to dashboard");
+      redirectToDashboard();
+    }
+    
+    // Listen for Civic auth complete events
+    const handleAuthEvent = (event: Event) => {
+      if ((event as CustomEvent).detail?.type === 'auth-complete') {
+        console.log("Auth complete event detected, checking user status");
+        // Short timeout to allow auth state to update
+        setTimeout(() => {
+          const userData = localStorage.getItem("auth_user");
+          if (userData && !redirectInProgress.current) {
+            console.log("User data found after auth, redirecting");
+            redirectToDashboard();
+          }
+        }, 500);
+      }
+    };
+    
+    // Add event listener for Civic auth events
+    window.addEventListener('civic', handleAuthEvent);
+    
+    // Polling as a fallback mechanism
+    const checkInterval = setInterval(() => {
+      if (redirectInProgress.current) {
+        clearInterval(checkInterval);
+        return;
+      }
+      
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        console.log("User data found during polling, redirecting");
+        clearInterval(checkInterval);
+        redirectToDashboard();
+      }
+    }, 1000);
+    
+    return () => {
+      window.removeEventListener('civic', handleAuthEvent);
+      clearInterval(checkInterval);
+    };
+  }, [user, router]);
+
+  // Immediate redirect if already authenticated
+  if (user && !redirectInProgress.current) {
+    redirectToDashboard();
     return null;
   }
 

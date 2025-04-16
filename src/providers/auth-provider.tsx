@@ -335,14 +335,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Update state
       setUser(userData);
       setIsLoading(false);
-      
-      // Check the current path to avoid unnecessary redirects if already on dashboard
-      if (pathname !== '/dashboard' && !pathname.startsWith('/dashboard/')) {
-        // Redirect to dashboard after successful authentication
-        router.push('/dashboard');
-      }
     }
-  }, [civicUser, civicLoading, solanaWalletAddress, router, pathname]);
+  }, [civicUser, civicLoading, solanaWalletAddress]);
 
   return (
     <CivicProvider clientId={civicClientId}>
