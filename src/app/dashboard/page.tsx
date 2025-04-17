@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
-import { UserButton } from "@civic/auth-web3/react";
+import { UserButton, useUser } from "@civic/auth-web3/react";
 
 interface Transaction {
   id: string;
@@ -59,28 +59,46 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData } = useAuth();
+  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
+  const civicUser = useUser();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   
-  // Initialize wallet address from localStorage only on client side
+  // Initialize wallet address from Civic context, auth context, or localStorage
   useEffect(() => {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
-          setWalletAddress(user.walletAddress);
-        }
-        }
-      } catch (error) {
-        console.error("Error initializing wallet address from localStorage:", error);
+    try {
+      // First priority: get from Civic context (most up-to-date)
+      const userWithWallet = civicUser?.user as any;
+      if (userWithWallet?.solana?.address) {
+        console.log("INITIALIZING WALLET ADDRESS FROM CIVIC:", userWithWallet.solana.address);
+        setWalletAddress(userWithWallet.solana.address);
+        return;
       }
-  }, []);
+      
+      // Second priority: get from Auth context
+      if (solanaWalletAddress) {
+        console.log("INITIALIZING WALLET ADDRESS FROM AUTH CONTEXT:", solanaWalletAddress);
+        setWalletAddress(solanaWalletAddress);
+        return;
+      }
+      
+      // Third priority: get from localStorage
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser.walletAddress) {
+          console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
+          setWalletAddress(parsedUser.walletAddress);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing wallet address:", error);
+    }
+  }, [civicUser, solanaWalletAddress]);
   
   // Generate wallet address if needed (only on client, after first render)
   useEffect(() => {
@@ -88,6 +106,24 @@ function DashboardContent() {
       if (walletAddress) return true; // Already have a wallet address
       
       try {
+        // If we have a Civic user but no wallet, try to create one
+        const userWithWallet = civicUser?.user as any;
+        if (userWithWallet && !userWithWallet?.solana?.address && userWithWallet?.createWallet) {
+          // Attempt to create a wallet via Civic's API
+          console.log("Creating wallet via Civic's API");
+          userWithWallet.createWallet()
+            .then(() => {
+              console.log("Wallet created successfully!");
+              // Reload to get updated context with the wallet
+              window.location.reload();
+            })
+            .catch((error: any) => {
+              console.error("Error creating wallet:", error);
+            });
+          return true;
+        }
+        
+        // Fallback to localStorage and generate a random wallet address
         const userData = localStorage.getItem("auth_user");
         if (userData) {
           const localUser = JSON.parse(userData);
@@ -109,7 +145,7 @@ function DashboardContent() {
     };
 
     ensureWalletAddress();
-  }, [walletAddress]);
+  }, [walletAddress, civicUser]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";

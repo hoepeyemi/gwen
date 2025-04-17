@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
-import { UserButton } from "@civic/auth-web3/react";
+import { UserButton, useUser } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const civicUser = useUser();
   const redirectInProgress = useRef(false);
 
   // Function to handle redirect to dashboard
@@ -22,15 +23,21 @@ export default function SignIn() {
     console.log("Redirecting to dashboard");
     
     try {
-      // Check if we have a wallet address in localStorage
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        if (parsedUser.walletAddress) {
-          console.log(`Redirecting to user's wallet dashboard: ${parsedUser.walletAddress}`);
-          router.push(`/dashboard/${parsedUser.walletAddress}`);
-          return;
-        }
+      // First check if we have the wallet address in the civic context
+      // Use type assertion for proper TypeScript handling
+      const userWithWallet = civicUser?.user as any;
+      if (userWithWallet?.solana?.address) {
+        const walletAddress = userWithWallet.solana.address;
+        console.log(`Redirecting to user's wallet dashboard: ${walletAddress}`);
+        router.push(`/dashboard/${walletAddress}`);
+        return;
+      }
+      
+      // If not in Civic context, check if it's in our auth context
+      if (user && user.walletAddress) {
+        console.log(`Redirecting to user's wallet dashboard: ${user.walletAddress}`);
+        router.push(`/dashboard/${user.walletAddress}`);
+        return;
       }
     } catch (error) {
       console.error("Error getting user wallet address:", error);
@@ -72,7 +79,8 @@ export default function SignIn() {
 
   // Enhanced redirect effect to actively monitor auth status
   useEffect(() => {
-    if (user && !redirectInProgress.current) {
+    if ((user && !redirectInProgress.current) || 
+        (civicUser && civicUser.user && !redirectInProgress.current)) {
       console.log("User authenticated, redirecting to dashboard");
       redirectToDashboard();
     }
@@ -83,9 +91,8 @@ export default function SignIn() {
         console.log("Auth complete event detected, checking user status");
         // Short timeout to allow auth state to update
         setTimeout(() => {
-          const userData = localStorage.getItem("auth_user");
-          if (userData && !redirectInProgress.current) {
-            console.log("User data found after auth, redirecting");
+          if (!redirectInProgress.current) {
+            console.log("User authenticated after civic event, redirecting");
             redirectToDashboard();
           }
         }, 500);
@@ -95,29 +102,13 @@ export default function SignIn() {
     // Add event listener for Civic auth events
     window.addEventListener('civic', handleAuthEvent);
     
-    // Polling as a fallback mechanism
-    const checkInterval = setInterval(() => {
-      if (redirectInProgress.current) {
-        clearInterval(checkInterval);
-        return;
-      }
-      
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        console.log("User data found during polling, redirecting");
-        clearInterval(checkInterval);
-        redirectToDashboard();
-      }
-    }, 1000);
-    
     return () => {
       window.removeEventListener('civic', handleAuthEvent);
-      clearInterval(checkInterval);
     };
-  }, [user, router]);
+  }, [user, civicUser, router]);
 
   // Immediate redirect if already authenticated
-  if (user && !redirectInProgress.current) {
+  if ((user || (civicUser && civicUser.user)) && !redirectInProgress.current) {
     redirectToDashboard();
     return null;
   }
