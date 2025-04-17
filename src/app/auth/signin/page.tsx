@@ -92,8 +92,23 @@ export default function SignIn() {
         // Short timeout to allow auth state to update
         setTimeout(() => {
           if (!redirectInProgress.current) {
-            console.log("User authenticated after civic event, redirecting");
-            redirectToDashboard();
+            console.log("User authenticated after civic event, forcefully redirecting");
+            redirectInProgress.current = true;
+            
+            // Try multiple redirect methods for better reliability
+            try {
+              // First try router.push
+              router.push('/dashboard');
+              
+              // Force browser navigation as backup (will only run if router.push doesn't cause navigation)
+              setTimeout(() => {
+                window.location.href = '/dashboard';
+              }, 300);
+            } catch (e) {
+              console.error("Error during redirect:", e);
+              // Final fallback
+              window.location.replace('/dashboard');
+            }
           }
         }, 500);
       }
