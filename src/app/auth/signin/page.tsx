@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
-import { UserButton } from "@civic/auth-web3/react";
+import { UserButton, useUser } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
+  const civicUser = useUser();
   const redirectInProgress = useRef(false);
 
   // Function to handle redirect to dashboard
@@ -72,7 +73,7 @@ export default function SignIn() {
 
   // Enhanced redirect effect to actively monitor auth status
   useEffect(() => {
-    if (user && !redirectInProgress.current) {
+    if ((user || civicUser?.user) && !redirectInProgress.current) {
       console.log("User authenticated, redirecting to dashboard");
       redirectToDashboard();
     }
@@ -83,17 +84,19 @@ export default function SignIn() {
         console.log("Auth complete event detected, checking user status");
         // Short timeout to allow auth state to update
         setTimeout(() => {
-          const userData = localStorage.getItem("auth_user");
-          if (userData && !redirectInProgress.current) {
-            console.log("User data found after auth, redirecting");
-            redirectToDashboard();
-          }
+          redirectToDashboard();
         }, 500);
       }
     };
     
     // Add event listener for Civic auth events
     window.addEventListener('civic', handleAuthEvent);
+    
+    // Also listen for the specific Civic auth state changes
+    if (civicUser && !civicUser.isLoading && civicUser.user && !redirectInProgress.current) {
+      console.log("Civic user detected, redirecting");
+      redirectToDashboard();
+    }
     
     // Polling as a fallback mechanism
     const checkInterval = setInterval(() => {
@@ -114,10 +117,10 @@ export default function SignIn() {
       window.removeEventListener('civic', handleAuthEvent);
       clearInterval(checkInterval);
     };
-  }, [user, router]);
+  }, [user, civicUser, router]);
 
   // Immediate redirect if already authenticated
-  if (user && !redirectInProgress.current) {
+  if ((user || (civicUser && !civicUser.isLoading && civicUser.user)) && !redirectInProgress.current) {
     redirectToDashboard();
     return null;
   }

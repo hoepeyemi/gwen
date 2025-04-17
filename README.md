@@ -1,8 +1,8 @@
-# Druid - Secure Financial Platform
+# Gwen - Secure Financial Platform
 
 ![Druid Logo](https://via.placeholder.com/200x60?text=Druid)
 
-Druid is a modern financial application that bridges traditional banking with blockchain technology, providing secure money transfers, bill payments, and wallet management with robust security features.
+Gwen is a modern financial application that bridges traditional banking with blockchain technology, providing secure money transfers, bill payments, and wallet management with robust security features.
 
 ## Table of Contents
 
@@ -332,7 +332,7 @@ sequenceDiagram
 ## Investments Platform
 
 ### Overview
-Druid's investment platform provides users with a range of investment options across multiple risk categories. The platform is designed to make investing accessible to users with varying levels of financial knowledge and risk tolerance.
+Gwen's investment platform provides users with a range of investment options across multiple risk categories. The platform is designed to make investing accessible to users with varying levels of financial knowledge and risk tolerance.
 
 ### Investment Categories
 1. **Savings**
