@@ -1,6 +1,6 @@
-# Contributing to Druid
+# Contributing to Gwen
 
-We love your input! We want to make contributing to Druid as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to Gwen as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code

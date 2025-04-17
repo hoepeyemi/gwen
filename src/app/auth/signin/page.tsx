@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
-import { SignInButton, UserButton } from "@civic/auth-web3/react";
+import { UserButton } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignIn() {
@@ -13,7 +13,6 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const redirectInProgress = useRef(false);
-  const userButtonRef = useRef<HTMLDivElement>(null);
 
   // Function to handle redirect to dashboard
   const redirectToDashboard = () => {
@@ -44,38 +43,31 @@ export default function SignIn() {
   // Function to handle Civic auth success
   const handleAuthSuccess = () => {
     console.log("Auth success callback triggered");
-    // Add a timeout to allow user data to be properly initialized
     setTimeout(() => {
       redirectToDashboard();
-    }, 1000);
+    }, 500);
   };
 
-  // Set up the event listener for our custom civic-button-click event
+  // Clear all local session data on mount to prevent authentication mismatches
   useEffect(() => {
-    const triggerCivicButton = () => {
-      console.log("Custom civic-button-click event triggered");
-      
-      // Find and click the button inside the UserButton component
-      if (userButtonRef.current) {
-        const buttonElement = userButtonRef.current.querySelector('button');
-        if (buttonElement) {
-          console.log("Found Civic button, clicking it");
-          buttonElement.click();
-        } else {
-          console.error("Civic button not found inside userButtonRef");
-        }
-      } else {
-        console.error("userButtonRef is null");
+    // Clear all civic auth-related data from local storage
+    const cookiesToClear = Object.keys(localStorage).filter(key => 
+      key.startsWith('civic') || 
+      key.includes('auth') || 
+      key.includes('session')
+    );
+    
+    cookiesToClear.forEach(key => {
+      console.log(`Clearing potential stale auth data: ${key}`);
+      localStorage.removeItem(key);
+    });
+    
+    // Clear any session storage items that might be related to auth
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.includes('civic') || key.includes('auth') || key.includes('session')) {
+        sessionStorage.removeItem(key);
       }
-    };
-    
-    // Add the event listener
-    document.addEventListener('civic-button-click', triggerCivicButton);
-    
-    // Clean up
-    return () => {
-      document.removeEventListener('civic-button-click', triggerCivicButton);
-    };
+    });
   }, []);
 
   // Enhanced redirect effect to actively monitor auth status
@@ -87,22 +79,42 @@ export default function SignIn() {
     
     // Listen for Civic auth complete events
     const handleAuthEvent = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      console.log("Civic event detected:", customEvent.detail);
-      
-      if (customEvent.detail?.type === 'auth-complete') {
-        console.log("Auth complete event detected");
-        handleAuthSuccess();
+      if ((event as CustomEvent).detail?.type === 'auth-complete') {
+        console.log("Auth complete event detected, checking user status");
+        // Short timeout to allow auth state to update
+        setTimeout(() => {
+          const userData = localStorage.getItem("auth_user");
+          if (userData && !redirectInProgress.current) {
+            console.log("User data found after auth, redirecting");
+            redirectToDashboard();
+          }
+        }, 500);
       }
     };
     
     // Add event listener for Civic auth events
     window.addEventListener('civic', handleAuthEvent);
     
+    // Polling as a fallback mechanism
+    const checkInterval = setInterval(() => {
+      if (redirectInProgress.current) {
+        clearInterval(checkInterval);
+        return;
+      }
+      
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        console.log("User data found during polling, redirecting");
+        clearInterval(checkInterval);
+        redirectToDashboard();
+      }
+    }, 1000);
+    
     return () => {
       window.removeEventListener('civic', handleAuthEvent);
+      clearInterval(checkInterval);
     };
-  }, [user]);
+  }, [user, router]);
 
   // Immediate redirect if already authenticated
   if (user && !redirectInProgress.current) {
@@ -129,20 +141,7 @@ export default function SignIn() {
           </p>
           
           <div className="w-full">
-            <Button 
-              onClick={() => {
-                console.log("Sign in button clicked");
-                document.dispatchEvent(new CustomEvent('civic-button-click'));
-              }} 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              Sign in with Civic
-            </Button>
-            
-            {/* Hidden UserButton that will be triggered by our custom button */}
-            <div className="hidden" ref={userButtonRef}>
-              <UserButton />
-            </div>
+            <UserButton />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
