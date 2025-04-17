@@ -42,7 +42,7 @@ export const usePasskey = (identifier: string) => {
         throw new Error("Email or phone is required to create a passkey");
       }
       
-      const user = "druid";
+      const user = "gwen";
       
       // Note the correct property destructuring
       const { keyId: kid, keyIdBase64, contractId: cid, signedTx } = 
@@ -120,7 +120,7 @@ export const usePasskey = (identifier: string) => {
 
   const addSigner = async (name: string) => {
     try {
-      const { keyId: kid, publicKey } = await account.createKey("druid", name);
+      const { keyId: kid, publicKey } = await account.createKey("gwen", name);
       
       // Create an admin transaction to add the signer
       const transaction = await account.addSecp256r1(

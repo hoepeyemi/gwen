@@ -330,7 +330,7 @@ const KYCForm: FC = () => {
             </Button>
           </div>
           <span className="mt-4 w-full text-center text-xs text-muted-foreground">
-            © Druid, All rights reserved.
+            © Gwen, All rights reserved.
           </span>
         </CardFooter>
       </Card>

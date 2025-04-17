@@ -22,7 +22,7 @@ export default function ReceiveTransfers() {
   const { user } = useAuth();
   const [qrVisible, setQrVisible] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [qrValue] = useState(`https://druid-kohl.vercel.app/payment/${address}`);
+  const [qrValue] = useState(`https://gwen-kohl.vercel.app/payment/${address}`);
   const { clickFeedback } = useHapticFeedback();
 
   // Reset copied state after 2 seconds
@@ -37,7 +37,7 @@ export default function ReceiveTransfers() {
     clickFeedback();
     if (navigator.share) {
       navigator.share({
-        title: "Send me money with Druid",
+        title: "Send me money with Gwen",
         text: "Send money instantly",
         url: qrValue,
       }).catch(err => {

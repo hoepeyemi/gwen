@@ -4,15 +4,15 @@ type tParams = Promise<{
 }>;
 
 export const metadata: Metadata = {
-  title: "Druid",
+  title: "Gwen",
   description: "Sent you a payment",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
   openGraph: {
     title: "Money for christmas dinner",
     description: "Johnny sent you a payment",
-    url: "https://druid.app",
+    url: "https://gwen-kohl.vercel.app/",
     images: [
-      "https://druid.app/api/og?amount=220&message=Money%20for%20christmas%20dinner&from=Johnny",
+      "https://gwen-kohl.vercel.app/api/og?amount=220&message=Money%20for%20christmas%20dinner&from=Johnny",
     ],
   },
 };

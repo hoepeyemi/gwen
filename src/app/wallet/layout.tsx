@@ -6,7 +6,7 @@ import { Card } from "~/components/ui/card";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Druid",
+  title: "Gwen",
   description: "Send money to your friends and family",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
@@ -20,7 +20,7 @@ export default function RootLayout({
         <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
       </Card>
       <span className="mt-4 text-xs text-zinc-500">
-        © Druid, All rights reserved.
+        © Gwen, All rights reserved.
       </span>
     </div>
   );

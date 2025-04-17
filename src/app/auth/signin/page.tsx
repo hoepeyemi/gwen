@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
-import { UserButton } from "@civic/auth-web3/react";
+import { SignInButton, UserButton } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignIn() {
@@ -13,24 +13,14 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const redirectInProgress = useRef(false);
-  const authCompletedRef = useRef(false);
-  
-  // Debug function to log auth status
-  const logAuthStatus = (source: string) => {
-    console.log(`[AUTH STATUS - ${source}]`, {
-      user: !!user,
-      redirectInProgress: redirectInProgress.current,
-      authCompleted: authCompletedRef.current,
-      userData: localStorage.getItem("auth_user") ? "exists" : "null" 
-    });
-  };
+  const userButtonRef = useRef<HTMLDivElement>(null);
 
   // Function to handle redirect to dashboard
   const redirectToDashboard = () => {
     if (redirectInProgress.current) return;
     
     redirectInProgress.current = true;
-    console.log("[REDIRECT] Starting redirect to dashboard");
+    console.log("Redirecting to dashboard");
     
     try {
       // Check if we have a wallet address in localStorage
@@ -38,143 +28,87 @@ export default function SignIn() {
       if (userData) {
         const parsedUser = JSON.parse(userData);
         if (parsedUser.walletAddress) {
-          console.log(`[REDIRECT] Found wallet address: ${parsedUser.walletAddress}`);
+          console.log(`Redirecting to user's wallet dashboard: ${parsedUser.walletAddress}`);
           router.push(`/dashboard/${parsedUser.walletAddress}`);
           return;
         }
       }
     } catch (error) {
-      console.error("[REDIRECT] Error getting user wallet address:", error);
+      console.error("Error getting user wallet address:", error);
     }
     
     // Fallback to the main dashboard if no wallet address found
-    console.log("[REDIRECT] No wallet address found, redirecting to main dashboard");
     router.push('/dashboard');
   };
 
-  // Function to handle Civic auth success - modified to use force flag
-  const handleAuthSuccess = (force = false) => {
-    console.log("[AUTH SUCCESS] Auth success callback triggered", { force });
-    logAuthStatus("handleAuthSuccess");
-
-    if (force || !redirectInProgress.current) {
-      authCompletedRef.current = true;
-      setTimeout(() => {
-        // Dispatch a custom event to notify other parts of the app
-        const event = new CustomEvent('app-auth-complete', { 
-          detail: { 
-            success: true,
-            timestamp: Date.now()
-          }
-        });
-        window.dispatchEvent(event);
-        
-        redirectToDashboard();
-      }, 500);
-    }
+  // Function to handle Civic auth success
+  const handleAuthSuccess = () => {
+    console.log("Auth success callback triggered");
+    // Add a timeout to allow user data to be properly initialized
+    setTimeout(() => {
+      redirectToDashboard();
+    }, 1000);
   };
 
-  // Clear all local session data on mount to prevent authentication mismatches
+  // Set up the event listener for our custom civic-button-click event
   useEffect(() => {
-    // Only clear data if user is not already logged in
-    if (!user) {
-      console.log("[INIT] Clearing potential stale auth data");
-      // Clear all civic auth-related data from local storage
-      const cookiesToClear = Object.keys(localStorage).filter(key => 
-        key.startsWith('civic') || 
-        (key.includes('auth') && key !== 'auth_user') || 
-        key.includes('session')
-      );
+    const triggerCivicButton = () => {
+      console.log("Custom civic-button-click event triggered");
       
-      cookiesToClear.forEach(key => {
-        console.log(`[INIT] Clearing: ${key}`);
-        localStorage.removeItem(key);
-      });
-      
-      // Clear any session storage items that might be related to auth
-      Object.keys(sessionStorage).forEach(key => {
-        if (key.includes('civic') || key.includes('auth') || key.includes('session')) {
-          sessionStorage.removeItem(key);
+      // Find and click the button inside the UserButton component
+      if (userButtonRef.current) {
+        const buttonElement = userButtonRef.current.querySelector('button');
+        if (buttonElement) {
+          console.log("Found Civic button, clicking it");
+          buttonElement.click();
+        } else {
+          console.error("Civic button not found inside userButtonRef");
         }
-      });
-    } else {
-      console.log("[INIT] User already logged in, skipping data clearing");
-    }
-    
-    // Set up a listener for our custom auth complete event
-    const appAuthCompleteHandler = (event: Event) => {
-      console.log("[CUSTOM EVENT] app-auth-complete received", (event as CustomEvent).detail);
-      setTimeout(() => redirectToDashboard(), 300);
+      } else {
+        console.error("userButtonRef is null");
+      }
     };
-    window.addEventListener('app-auth-complete', appAuthCompleteHandler);
     
+    // Add the event listener
+    document.addEventListener('civic-button-click', triggerCivicButton);
+    
+    // Clean up
     return () => {
-      window.removeEventListener('app-auth-complete', appAuthCompleteHandler);
+      document.removeEventListener('civic-button-click', triggerCivicButton);
     };
   }, []);
 
   // Enhanced redirect effect to actively monitor auth status
   useEffect(() => {
-    logAuthStatus("redirect effect");
-    
     if (user && !redirectInProgress.current) {
-      console.log("[AUTH] User authenticated, redirecting to dashboard");
+      console.log("User authenticated, redirecting to dashboard");
       redirectToDashboard();
     }
     
-    // Set up event listeners for Civic auth events
-    const civicUserLoggedInHandler = () => {
-      console.log("[CIVIC EVENT] User logged in event detected");
-      handleAuthSuccess(true);
-    };
-    
-    const civicAuthCompleteHandler = (event: Event) => {
-      if ((event as CustomEvent).detail?.type === 'auth-complete') {
-        console.log("[CIVIC EVENT] Auth complete event detected", (event as CustomEvent).detail);
-        // Short timeout to allow auth state to update
-        setTimeout(() => {
-          const userData = localStorage.getItem("auth_user");
-          if (userData && !redirectInProgress.current) {
-            console.log("[CIVIC EVENT] User data found after auth, redirecting");
-            handleAuthSuccess(true);
-          }
-        }, 300);
-      }
-    };
-    
-    // Add event listeners for Civic auth events
-    window.addEventListener('civic-user-logged-in', civicUserLoggedInHandler);
-    window.addEventListener('civic', civicAuthCompleteHandler);
-    
-    // Polling as a fallback mechanism for detecting auth completion
-    const checkInterval = setInterval(() => {
-      if (redirectInProgress.current) {
-        clearInterval(checkInterval);
-        return;
-      }
+    // Listen for Civic auth complete events
+    const handleAuthEvent = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log("Civic event detected:", customEvent.detail);
       
-      const userData = localStorage.getItem("auth_user");
-      if (userData && !authCompletedRef.current) {
-        console.log("[POLLING] User data found during polling, redirecting");
-        clearInterval(checkInterval);
-        handleAuthSuccess(true);
+      if (customEvent.detail?.type === 'auth-complete') {
+        console.log("Auth complete event detected");
+        handleAuthSuccess();
       }
-    }, 500);
+    };
+    
+    // Add event listener for Civic auth events
+    window.addEventListener('civic', handleAuthEvent);
     
     return () => {
-      window.removeEventListener('civic-user-logged-in', civicUserLoggedInHandler);
-      window.removeEventListener('civic', civicAuthCompleteHandler);
-      clearInterval(checkInterval);
+      window.removeEventListener('civic', handleAuthEvent);
     };
-  }, [user, router]);
+  }, [user]);
 
   // Immediate redirect if already authenticated
-  useEffect(() => {
-    if (user && !redirectInProgress.current) {
-      console.log("[IMMEDIATE CHECK] User already authenticated, redirecting immediately");
-      redirectToDashboard();
-    }
-  }, [user]);
+  if (user && !redirectInProgress.current) {
+    redirectToDashboard();
+    return null;
+  }
 
   return (
     <div className="container flex h-screen items-center justify-center">
@@ -195,7 +129,20 @@ export default function SignIn() {
           </p>
           
           <div className="w-full">
-            <UserButton />
+            <Button 
+              onClick={() => {
+                console.log("Sign in button clicked");
+                document.dispatchEvent(new CustomEvent('civic-button-click'));
+              }} 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Sign in with Civic
+            </Button>
+            
+            {/* Hidden UserButton that will be triggered by our custom button */}
+            <div className="hidden" ref={userButtonRef}>
+              <UserButton />
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">

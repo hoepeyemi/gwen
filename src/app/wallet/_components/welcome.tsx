@@ -40,12 +40,12 @@ export default function Welcome({
   return (
     <div className="flex flex-col items-center px-4 py-8 text-center">
       <h1 className="mb-4 text-2xl font-bold">
-        {isNewUser ? "Welcome to Druid!" : "Connect Your Wallet"}
+        {isNewUser ? "Welcome to Gwen!" : "Connect Your Wallet"}
       </h1>
       <p className="mb-8 text-gray-600">
         {isNewUser
           ? "Let's set up your digital wallet to send and receive payments."
-          : "Connect to your existing Druid wallet."}
+          : "Connect to your existing Gwen wallet."}
       </p>
 
       {hasCreatedWallet ? (

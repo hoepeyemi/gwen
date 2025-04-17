@@ -172,7 +172,7 @@ const ConfirmComponent: React.FC = () => {
         </CardContent>
         <CardFooter className="flex flex-col">
           <span className="mt-4 w-full text-center text-xs text-muted-foreground">
-            © Druid, All rights reserved.
+            © Gwen, All rights reserved.
           </span>
         </CardFooter>
       </Card>

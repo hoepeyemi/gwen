@@ -156,7 +156,7 @@ export default function Component() {
             </Link>
           </p>
           <span className="mt-4 text-xs text-muted-foreground">
-            © 2025 Druid, All rights reserved.
+            © 2025 Gwen, All rights reserved.
           </span>
         </CardFooter>
       </Card>

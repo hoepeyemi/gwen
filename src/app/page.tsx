@@ -53,7 +53,7 @@ export default function LandingPage() {
       {/* Features Section - Enhanced with more visual appeal */}
       <section className="py-24 bg-gradient-to-b from-gray-900 to-gray-800">
         <div className="container mx-auto px-6">
-          <h2 className="mb-16 text-center text-4xl font-bold text-white">Why Choose <span className="text-blue-400">Druid</span></h2>
+          <h2 className="mb-16 text-center text-4xl font-bold text-white">Why Choose <span className="text-blue-400">Gwen</span></h2>
           <div className="grid gap-8 md:grid-cols-3">
             <div className="rounded-xl bg-white/10 backdrop-blur-sm p-8 shadow-xl border border-white/10 transform hover:scale-105 transition-all duration-300 text-white">
               <h3 className="mb-4 text-2xl font-semibold text-blue-300">No Hidden Fees</h3>
@@ -105,7 +105,7 @@ export default function LandingPage() {
       {/* Footer - Redesigned for better consistency */}
       <footer className="bg-gray-900 py-16 text-center text-white">
         <div className="container mx-auto px-6">
-          <p className="mb-3 text-3xl font-bold text-blue-400">Druid</p>
+          <p className="mb-3 text-3xl font-bold text-blue-400">Gwen</p>
           <p className="mb-8 text-lg text-gray-300">
             Send money instantly to anyone, anywhere.
           </p>
@@ -115,7 +115,7 @@ export default function LandingPage() {
             <a href="#" className="text-gray-300 hover:text-blue-400 transition-colors">Contact</a>
           </div>
           <p className="text-sm text-gray-500">
-            © {new Date().getFullYear()} Druid. All rights reserved.
+            © {new Date().getFullYear()} Gwen. All rights reserved.
           </p>
         </div>
       </footer>

@@ -30,7 +30,7 @@ export default function LoadingScreen() {
       <CardHeader>
         <CardTitle className="flex items-center justify-center text-center text-2xl font-bold">
           <Loader2 className="mr-2 h-6 w-6 animate-spin text-blue-500" />
-          Druid
+          Gwen
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">

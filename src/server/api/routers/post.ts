@@ -74,7 +74,7 @@ export const postRouter = createTRPCRouter({
         
         // Try to send SMS, but handle errors gracefully
         try {
-          await sendSms(input.phone, `Your Druidapp OTP is: ${otp}`);
+          await sendSms(input.phone, `Your Gwen app OTP is: ${otp}`);
         } catch (error) {
           console.error("Failed to send SMS:", error);
           // In development, continue even if SMS fails

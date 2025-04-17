@@ -16,7 +16,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Druid",
+  title: "Gwen",
   description: "Send money to your friends and family",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
