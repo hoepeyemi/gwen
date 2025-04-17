@@ -180,13 +180,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const storedUser = localStorage.getItem("auth_user");
     if (storedUser) {
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        
-        // Also set wallet address if available
-        if (parsedUser.walletAddress) {
-          setSolanaWalletAddress(parsedUser.walletAddress);
-        }
+        setUser(JSON.parse(storedUser));
       } catch (error) {
         console.error("Failed to parse stored user", error);
         localStorage.removeItem("auth_user");
@@ -213,7 +207,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Component to handle Solana wallet creation and synchronization
   const SolanaWalletManager = () => {
     const { user: userContext, isLoading: civicLoading, error: civicError } = useUser();
-    const isAuthRoute = pathname?.includes('/auth/');
 
     // Handle Civic errors, especially session mismatch errors
     useEffect(() => {
@@ -239,7 +232,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Redirect to sign-in after a short delay
           setTimeout(() => {
             router.push("/auth/signin");
-          }, 1000);
+          }, 1500);
         }
       }
     }, [civicError, router]);
@@ -270,32 +263,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
               toast.success("Wallet created successfully!", { id: "wallet-creation" });
               console.log("Solana wallet created successfully!");
               
-              // Instead of reloading, try to get the wallet address immediately
-              if (userHasWallet(context)) {
-                console.log("Wallet created, updating address:", context.solana.address);
-                setSolanaWalletAddress(context.solana.address);
-                
-                // Update user data with wallet address if we have a user
-                if (user) {
-                  const updatedUser = { 
-                    ...user, 
-                    walletAddress: context.solana.address 
-                  };
-                  
-                  setUser(updatedUser);
-                  localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-                  
-                  // If on auth page, redirect to dashboard
-                  if (isAuthRoute) {
-                    setTimeout(() => {
-                      router.push(`/dashboard/${context.solana.address}`);
-                    }, 500);
-                  }
-                }
-              } else {
-                // Fallback to reload if we couldn't get the wallet immediately
-                window.location.reload();
-              }
+              // Reload to get updated context with the wallet
+              window.location.reload();
             } else {
               console.error("createWallet function not available on user context");
             }
@@ -313,13 +282,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
               
               setUser(updatedUser);
               localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-              
-              // If on auth page, redirect to dashboard
-              if (isAuthRoute) {
-                setTimeout(() => {
-                  router.push(`/dashboard/${context.solana.address}`);
-                }, 500);
-              }
             }
           }
         } catch (error) {
@@ -329,7 +291,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       };
 
       createAndSyncWallet();
-    }, [userContext?.user, civicLoading, isAuthRoute]);
+    }, [userContext?.user, civicLoading]);
 
     return null;
   };
@@ -373,28 +335,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Update state
       setUser(userData);
       setIsLoading(false);
-
-      // Redirect to dashboard if on auth page
-      if (pathname?.includes('/auth/') && existingWalletAddress) {
-        router.push(`/dashboard/${existingWalletAddress}`);
-      } else if (pathname?.includes('/auth/')) {
-        // Set a temporary wallet address for immediate login
-        const tempWalletAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-        
-        const updatedUserData = {
-          ...userData,
-          walletAddress: tempWalletAddress
-        };
-        
-        localStorage.setItem("auth_user", JSON.stringify(updatedUserData));
-        setUser(updatedUserData);
-        setSolanaWalletAddress(tempWalletAddress);
-        
-        // Redirect with the temporary wallet address
-        router.push(`/dashboard/${tempWalletAddress}`);
-      }
     }
-  }, [civicUser, civicLoading, solanaWalletAddress, pathname, router]);
+  }, [civicUser, civicLoading, solanaWalletAddress]);
 
   return (
     <CivicProvider clientId={civicClientId}>

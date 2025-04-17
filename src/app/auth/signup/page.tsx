@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, UserPlus } from "lucide-react";
-import { UserButton, useUser } from "@civic/auth-web3/react";
+import { UserButton } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignUp() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const civicUser = useUser();
   const redirectInProgress = useRef(false);
+  const [authEventReceived, setAuthEventReceived] = useState(false);
   
   // Function to handle redirect to dashboard
   const redirectToDashboard = () => {
@@ -23,7 +23,7 @@ export default function SignUp() {
     console.log("Redirecting to dashboard");
     
     try {
-      // Check if we have a wallet address in localStorage
+      // Look for wallet address in localStorage
       const userData = localStorage.getItem("auth_user");
       if (userData) {
         const parsedUser = JSON.parse(userData);
@@ -41,64 +41,81 @@ export default function SignUp() {
     router.push('/dashboard');
   };
   
-  // Function to handle Civic auth success
-  const handleAuthSuccess = () => {
-    console.log("Auth success callback triggered");
-    setTimeout(() => {
-      redirectToDashboard();
-    }, 500);
-  };
-  
-  // Enhanced redirect effect to actively monitor auth status
+  // Handle Civic auth events
   useEffect(() => {
-    if ((user || civicUser?.user) && !redirectInProgress.current) {
-      console.log("User authenticated, redirecting to dashboard");
-      redirectToDashboard();
-    }
-    
-    // Listen for Civic auth complete events
-    const handleAuthEvent = (event: Event) => {
-      if ((event as CustomEvent).detail?.type === 'auth-complete') {
-        console.log("Auth complete event detected, checking user status");
-        // Short timeout to allow auth state to update
+    const handleCivicEvent = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      
+      if (detail?.type === 'auth-complete') {
+        console.log("Civic auth-complete event detected", detail);
+        setAuthEventReceived(true);
+        
+        // Short delay to allow user data to be processed
         setTimeout(() => {
           redirectToDashboard();
-        }, 500);
+        }, 800);
       }
     };
     
-    // Add event listener for Civic auth events
-    window.addEventListener('civic', handleAuthEvent);
-    
-    // Also listen for the specific Civic auth state changes
-    if (civicUser && !civicUser.isLoading && civicUser.user && !redirectInProgress.current) {
-      console.log("Civic user detected, redirecting");
-      redirectToDashboard();
-    }
-    
-    // Polling as a fallback mechanism
-    const checkInterval = setInterval(() => {
-      if (redirectInProgress.current) {
-        clearInterval(checkInterval);
-        return;
-      }
-      
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        console.log("User data found during polling, redirecting");
-        clearInterval(checkInterval);
-        redirectToDashboard();
-      }
-    }, 1000);
+    // Add event listener
+    window.addEventListener('civic', handleCivicEvent);
     
     return () => {
-      window.removeEventListener('civic', handleAuthEvent);
-      clearInterval(checkInterval);
+      window.removeEventListener('civic', handleCivicEvent);
     };
-  }, [user, civicUser, router]);
+  }, [router]);
+
+  // This effect runs when auth event is received OR user state changes
+  useEffect(() => {
+    if ((authEventReceived || user) && !redirectInProgress.current) {
+      console.log("Auth detected - preparing redirect", { authEventReceived, user: !!user });
+      
+      // Check every 200ms for 5 seconds to see if user data appears in localStorage
+      let attempts = 0;
+      const maxAttempts = 25;  // 5 seconds total (25 * 200ms)
+      
+      const checkInterval = setInterval(() => {
+        attempts++;
+        
+        if (attempts >= maxAttempts) {
+          console.log("Max attempts reached, proceeding with redirect");
+          clearInterval(checkInterval);
+          redirectToDashboard();
+          return;
+        }
+        
+        try {
+          const userData = localStorage.getItem("auth_user");
+          if (userData) {
+            const parsedUser = JSON.parse(userData);
+            if (parsedUser.walletAddress) {
+              console.log(`Found wallet address on attempt ${attempts}: ${parsedUser.walletAddress}`);
+              clearInterval(checkInterval);
+              redirectToDashboard();
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error checking local storage:", error);
+        }
+        
+        // If we've tried a few times and still nothing, but we have a user object,
+        // go ahead and redirect
+        if (attempts > 10 && user && !redirectInProgress.current) {
+          console.log("We have a user but no wallet address, redirecting anyway");
+          clearInterval(checkInterval);
+          redirectToDashboard();
+        }
+      }, 200);
+      
+      return () => {
+        clearInterval(checkInterval);
+      };
+    }
+  }, [authEventReceived, user, router]);
   
   // Immediate redirect if already authenticated
-  if ((user || (civicUser && !civicUser.isLoading && civicUser.user)) && !redirectInProgress.current) {
+  if (user && !redirectInProgress.current) {
     redirectToDashboard();
     return null;
   }
