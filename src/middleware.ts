@@ -6,6 +6,7 @@ export const config = {
   // Include the paths you wish to secure
   matcher: [
     "/api/:path*",
-    "/dashboard/:path*"
+    // Temporarily comment out dashboard to allow debugging
+    // "/dashboard/:path*"
   ]
 } 
