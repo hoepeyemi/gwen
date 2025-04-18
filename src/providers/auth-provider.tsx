@@ -339,10 +339,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [civicUser, civicLoading, solanaWalletAddress]);
 
   return (
-    <CivicProvider 
-      clientId={civicClientId}
-      redirectUrl="/dashboard"
-    >
+    <CivicProvider clientId={civicClientId}>
       <UserContextProvider>
         <SolanaWalletManager />
         <AuthContext.Provider value={{ 
@@ -353,8 +350,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           refreshUserData, 
           solanaWalletAddress 
         }}>
-      {children}
-    </AuthContext.Provider>
+          {children}
+        </AuthContext.Provider>
       </UserContextProvider>
     </CivicProvider>
   );

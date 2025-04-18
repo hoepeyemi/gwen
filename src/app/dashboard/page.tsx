@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
-import { UserButton, useUser } from "@civic/auth-web3/react";
+import { useUser } from "@civic/auth-web3/react";
 
 interface Transaction {
   id: string;
@@ -245,7 +245,7 @@ function DashboardContent() {
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center">
-          <UserButton />
+          {/* UserButton removed - it's now in the main app entry point */}
         </div>
         </div>
 

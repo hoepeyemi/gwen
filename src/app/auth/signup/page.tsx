@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, UserPlus } from "lucide-react";
-import { UserButton, useUser } from "@civic/auth-web3/react";
+import { useUser } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function SignUp() {
@@ -62,23 +62,8 @@ export default function SignUp() {
         // Short timeout to allow auth state to update
         setTimeout(() => {
           if (!redirectInProgress.current) {
-            console.log("User authenticated after civic event, forcefully redirecting");
-            redirectInProgress.current = true;
-            
-            // Try multiple redirect methods for better reliability
-            try {
-              // First try router.push
-              router.push('/dashboard');
-              
-              // Force browser navigation as backup (will only run if router.push doesn't cause navigation)
-              setTimeout(() => {
-                window.location.href = '/dashboard';
-              }, 300);
-            } catch (e) {
-              console.error("Error during redirect:", e);
-              // Final fallback
-              window.location.replace('/dashboard');
-            }
+            console.log("User authenticated after civic event, redirecting");
+            redirectToDashboard();
           }
         }, 500);
       }
@@ -117,7 +102,14 @@ export default function SignUp() {
           </p>
           
           <div className="w-full">
-            <UserButton />
+            {/* The UserButton is now in the root layout */}
+            <Button 
+              className="w-full py-6 text-lg"
+              size="lg"
+              onClick={() => window.location.href = "/"}
+            >
+              Sign up with Civic
+            </Button>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">

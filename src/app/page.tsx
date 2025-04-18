@@ -1,16 +1,42 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { WaitlistForm } from "~/app/components/waitlist-form";
 import { Globe } from "~/app/components/globe";
+import { UserButton, useUser } from "@civic/auth-web3/react";
+import { useAuth } from "~/providers/auth-provider";
 
 export default function LandingPage() {
   const router = useRouter();
   const [showWaitlist, setShowWaitlist] = useState(false);
+  const civicUser = useUser();
+  const { user } = useAuth();
+  
+  // Handle redirects if the user is authenticated
+  useEffect(() => {
+    if (user || (civicUser && civicUser.user)) {
+      // Try to get the wallet address from Civic context or auth context
+      const userWithWallet = civicUser?.user as any;
+      const walletAddress = userWithWallet?.solana?.address || user?.walletAddress;
+      
+      if (walletAddress) {
+        console.log(`User is authenticated, redirecting to dashboard: ${walletAddress}`);
+        router.push(`/dashboard/${walletAddress}`);
+      } else {
+        console.log("User is authenticated, redirecting to dashboard");
+        router.push("/dashboard");
+      }
+    }
+  }, [user, civicUser, router]);
 
   return (
     <div className="relative">
+      {/* Civic Auth Button - Positioned absolutely on the page */}
+      <div className="absolute top-4 right-4 z-30">
+        <UserButton />
+      </div>
+      
       {/* Hero Section */}
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
         {/* Globe background with darkened overlay */}
