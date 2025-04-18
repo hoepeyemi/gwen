@@ -11,24 +11,39 @@ export default function LandingPage() {
   const router = useRouter();
   const [showWaitlist, setShowWaitlist] = useState(false);
   const civicUser = useUser();
-  const { user } = useAuth();
+  const { user, publicKey: authPublicKey } = useAuth();
   
   // Handle redirects if the user is authenticated
   useEffect(() => {
     if (user || (civicUser && civicUser.user)) {
-      // Try to get the wallet address from Civic context or auth context
-      const userWithWallet = civicUser?.user as any;
-      const walletAddress = userWithWallet?.solana?.address || user?.walletAddress;
-      
-      if (walletAddress) {
-        console.log(`User is authenticated, redirecting to dashboard: ${walletAddress}`);
-        router.push(`/dashboard/${walletAddress}`);
-      } else {
-        console.log("User is authenticated, redirecting to dashboard");
-        router.push("/dashboard");
+      // Check for wallet address in auth context
+      if (authPublicKey) {
+        console.log(`User is authenticated with auth publicKey: ${authPublicKey}`);
+        router.push(`/dashboard/${authPublicKey}`);
+        return;
       }
+      
+      // Check civic user for wallet address
+      const userWithWallet = civicUser?.user as any;
+      if (userWithWallet?.solana?.address) {
+        const walletAddress = userWithWallet.solana.address;
+        console.log(`User is authenticated with Civic solana address: ${walletAddress}`);
+        router.push(`/dashboard/${walletAddress}`);
+        return;
+      }
+      
+      // Check user for wallet address
+      if (user?.walletAddress) {
+        console.log(`User is authenticated with stored wallet address: ${user.walletAddress}`);
+        router.push(`/dashboard/${user.walletAddress}`);
+        return;
+      }
+      
+      // Fallback: redirect to the main dashboard
+      console.log("User is authenticated, but no wallet address found. Redirecting to main dashboard.");
+      router.push("/dashboard");
     }
-  }, [user, civicUser, router]);
+  }, [user, civicUser, authPublicKey, router]);
 
   return (
     <div className="relative">

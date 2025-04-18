@@ -59,7 +59,7 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
+  const { user, logout, refreshUserData, publicKey: authPublicKey } = useAuth();
   const civicUser = useUser();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
@@ -70,7 +70,14 @@ function DashboardContent() {
   // Initialize wallet address from Civic context, auth context, or localStorage
   useEffect(() => {
     try {
-      // First priority: get from Civic context (most up-to-date)
+      // First priority: get from Auth context
+      if (authPublicKey) {
+        console.log("INITIALIZING WALLET ADDRESS FROM AUTH CONTEXT:", authPublicKey);
+        setWalletAddress(authPublicKey);
+        return;
+      }
+      
+      // Second priority: get from Civic context
       const userWithWallet = civicUser?.user as any;
       if (userWithWallet?.solana?.address) {
         console.log("INITIALIZING WALLET ADDRESS FROM CIVIC:", userWithWallet.solana.address);
@@ -78,14 +85,14 @@ function DashboardContent() {
         return;
       }
       
-      // Second priority: get from Auth context
-      if (solanaWalletAddress) {
-        console.log("INITIALIZING WALLET ADDRESS FROM AUTH CONTEXT:", solanaWalletAddress);
-        setWalletAddress(solanaWalletAddress);
+      // Third priority: get from user object
+      if (user?.walletAddress) {
+        console.log("INITIALIZING WALLET ADDRESS FROM USER:", user.walletAddress);
+        setWalletAddress(user.walletAddress);
         return;
       }
       
-      // Third priority: get from localStorage
+      // Last priority: get from localStorage
       const userData = localStorage.getItem("auth_user");
       if (userData) {
         const parsedUser = JSON.parse(userData);
@@ -98,7 +105,7 @@ function DashboardContent() {
     } catch (error) {
       console.error("Error initializing wallet address:", error);
     }
-  }, [civicUser, solanaWalletAddress]);
+  }, [civicUser, authPublicKey, user]);
   
   // Generate wallet address if needed (only on client, after first render)
   useEffect(() => {
