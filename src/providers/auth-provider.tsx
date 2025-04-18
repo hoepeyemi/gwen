@@ -12,7 +12,6 @@ import {
   CivicAuthProvider as CivicProvider, 
   useUser as useCivicUser,
   type UserContextType,
-  useWallet,
 } from "@civic/auth-web3/react";
 import toast from "react-hot-toast";
 import { env } from "~/env";
@@ -60,7 +59,6 @@ interface AuthContextType {
   logout: () => void;
   refreshUserData: (userId: number) => Promise<User | null>;
   solanaWalletAddress?: string | null;
-  publicKey?: string | null;
 }
 
 // Create a separate context for Web3 user data from Civic
@@ -86,7 +84,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [solanaWalletAddress, setSolanaWalletAddress] = useState<string | null>(null);
-  const [publicKey, setPublicKey] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -174,7 +171,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     setUser(null);
     setSolanaWalletAddress(null);
-    setPublicKey(null);
     localStorage.removeItem("auth_user");
     router.push("/auth/signin");
   };
@@ -211,8 +207,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Component to handle Solana wallet creation and synchronization
   const SolanaWalletManager = () => {
     const { user: userContext, isLoading: civicLoading, error: civicError } = useUser();
-    const wallet = useWallet({ type: "solana" });
-    
+
     // Handle Civic errors, especially session mismatch errors
     useEffect(() => {
       if (civicError) {
@@ -230,7 +225,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Clear state
           setUser(null);
           setSolanaWalletAddress(null);
-          setPublicKey(null);
           
           // Show toast message
           toast.error("Authentication session expired. Please sign in again.");
@@ -243,53 +237,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }, [civicError, router]);
 
-    // Get the publicKey from the wallet - this runs on every wallet change
-    useEffect(() => {
-      // Cast wallet to any to access publicKey
-      const solanaWallet = wallet as any;
-      if (solanaWallet && solanaWallet.publicKey) {
-        const walletAddress = solanaWallet.publicKey.toString();
-        console.log("Setting publicKey from wallet:", walletAddress);
-        
-        // Update both state values to ensure consistency
-        setPublicKey(walletAddress);
-        setSolanaWalletAddress(walletAddress);
-        
-        // Always update localStorage to ensure it's up-to-date
-        const storedUser = localStorage.getItem("auth_user");
-        let updatedUser;
-        
-        if (storedUser) {
-          try {
-            const userData = JSON.parse(storedUser);
-            updatedUser = { 
-              ...userData, 
-              walletAddress: walletAddress
-            };
-          } catch (error) {
-            console.error("Error parsing stored user:", error);
-            updatedUser = { 
-              id: 0,
-              walletAddress: walletAddress
-            };
-          }
-        } else {
-          // Create minimal user data if none exists
-          updatedUser = { 
-            id: 0,
-            walletAddress: walletAddress
-          };
-        }
-        
-        // Update state and localStorage
-        setUser(updatedUser);
-        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-        
-        // Debug - display user data after update
-        console.log("Updated user data with wallet address:", updatedUser);
-      }
-    }, [wallet]);
-
     // Handle wallet creation and management
     useEffect(() => {
       const createAndSyncWallet = async () => {
@@ -299,35 +246,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         try {
-          // If we already have a public key from the wallet, use that
-          // Cast wallet to any to access publicKey
-          const solanaWallet = wallet as any;
-          if (solanaWallet && solanaWallet.publicKey) {
-            const walletAddress = solanaWallet.publicKey.toString();
-            console.log("Wallet already connected:", walletAddress);
-            setSolanaWalletAddress(walletAddress);
-            setPublicKey(walletAddress);
-            
-            // Update our user with the wallet address
-            if (user) {
-              const updatedUser = {
-                ...user,
-                walletAddress: walletAddress
-              };
-              setUser(updatedUser);
-              localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-            } else {
-              // If we don't have a user yet but do have a wallet, create a minimal user
-              const minimalUser = {
-                id: 0,
-                walletAddress: walletAddress
-              };
-              setUser(minimalUser);
-              localStorage.setItem("auth_user", JSON.stringify(minimalUser));
-            }
-            return;
-          }
-          
           // Cast userContext to any to handle the solana property which might not be in the type
           const context = userContext as any;
           
@@ -373,7 +291,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       };
 
       createAndSyncWallet();
-    }, [userContext?.user, civicLoading, wallet]);
+    }, [userContext?.user, civicLoading]);
 
     return null;
   };
@@ -407,7 +325,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         firstName: civicUser.name ? civicUser.name.split(' ')[0] : null,
         lastName: civicUser.name ? civicUser.name.split(' ').slice(1).join(' ') : null,
         name: civicUser.name || null,
-        walletAddress: publicKey || existingWalletAddress || null,
+        walletAddress: existingWalletAddress || null,
         hashedPin: existingHashedPin,
       };
 
@@ -418,7 +336,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(userData);
       setIsLoading(false);
     }
-  }, [civicUser, civicLoading, solanaWalletAddress, publicKey]);
+  }, [civicUser, civicLoading, solanaWalletAddress]);
 
   return (
     <CivicProvider clientId={civicClientId}>
@@ -430,11 +348,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           login, 
           logout, 
           refreshUserData, 
-          solanaWalletAddress,
-          publicKey
+          solanaWalletAddress 
         }}>
-          {children}
-        </AuthContext.Provider>
+      {children}
+    </AuthContext.Provider>
       </UserContextProvider>
     </CivicProvider>
   );

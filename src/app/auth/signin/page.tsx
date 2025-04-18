@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
-import { useUser } from "@civic/auth-web3/react";
+import { UserButton } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
+import { useUser } from "~/providers/auth-provider";
 
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const civicUser = useUser();
+  const { user: civicUserContext } = useUser();
   const redirectInProgress = useRef(false);
 
   // Function to handle redirect to dashboard
@@ -21,29 +22,6 @@ export default function SignIn() {
     
     redirectInProgress.current = true;
     console.log("Redirecting to dashboard");
-    
-    try {
-      // First check if we have the wallet address in the civic context
-      // Use type assertion for proper TypeScript handling
-      const userWithWallet = civicUser?.user as any;
-      if (userWithWallet?.solana?.address) {
-        const walletAddress = userWithWallet.solana.address;
-        console.log(`Redirecting to user's wallet dashboard: ${walletAddress}`);
-        router.push(`/dashboard/${walletAddress}`);
-        return;
-      }
-      
-      // If not in Civic context, check if it's in our auth context
-      if (user && user.walletAddress) {
-        console.log(`Redirecting to user's wallet dashboard: ${user.walletAddress}`);
-        router.push(`/dashboard/${user.walletAddress}`);
-        return;
-      }
-    } catch (error) {
-      console.error("Error getting user wallet address:", error);
-    }
-    
-    // Fallback to the main dashboard if no wallet address found
     router.push('/dashboard');
   };
 
@@ -79,9 +57,34 @@ export default function SignIn() {
 
   // Enhanced redirect effect to actively monitor auth status
   useEffect(() => {
-    if ((user && !redirectInProgress.current) || 
-        (civicUser && civicUser.user && !redirectInProgress.current)) {
+    if (user && !redirectInProgress.current) {
       console.log("User authenticated, redirecting to dashboard");
+      redirectToDashboard();
+    }
+
+    // Check civic context separately
+    if (civicUserContext?.user && !redirectInProgress.current) {
+      console.log("Civic user authenticated, redirecting to dashboard");
+      // Save civic user data to localStorage first
+      try {
+        const civicUser = civicUserContext.user;
+        const userData = localStorage.getItem("auth_user") || "{}";
+        const parsedUser = JSON.parse(userData);
+        
+        // Merge existing data with civic data
+        const mergedUser = {
+          ...parsedUser,
+          id: parseInt(civicUser.id || parsedUser.id || '0'),
+          email: civicUser.email || parsedUser.email,
+          name: civicUser.name || parsedUser.name,
+          picture: civicUser.picture || parsedUser.picture,
+        };
+        
+        localStorage.setItem("auth_user", JSON.stringify(mergedUser));
+      } catch (error) {
+        console.error("Error saving civic user data:", error);
+      }
+      
       redirectToDashboard();
     }
     
@@ -91,8 +94,9 @@ export default function SignIn() {
         console.log("Auth complete event detected, checking user status");
         // Short timeout to allow auth state to update
         setTimeout(() => {
-          if (!redirectInProgress.current) {
-            console.log("User authenticated after civic event, redirecting");
+          const userData = localStorage.getItem("auth_user");
+          if (userData && !redirectInProgress.current) {
+            console.log("User data found after auth, redirecting");
             redirectToDashboard();
           }
         }, 500);
@@ -102,13 +106,29 @@ export default function SignIn() {
     // Add event listener for Civic auth events
     window.addEventListener('civic', handleAuthEvent);
     
+    // Polling as a fallback mechanism
+    const checkInterval = setInterval(() => {
+      if (redirectInProgress.current) {
+        clearInterval(checkInterval);
+        return;
+      }
+      
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        console.log("User data found during polling, redirecting");
+        clearInterval(checkInterval);
+        redirectToDashboard();
+      }
+    }, 1000);
+    
     return () => {
       window.removeEventListener('civic', handleAuthEvent);
+      clearInterval(checkInterval);
     };
-  }, [user, civicUser, router]);
+  }, [user, civicUserContext, router]);
 
   // Immediate redirect if already authenticated
-  if ((user || (civicUser && civicUser.user)) && !redirectInProgress.current) {
+  if (user && !redirectInProgress.current) {
     redirectToDashboard();
     return null;
   }
@@ -132,14 +152,7 @@ export default function SignIn() {
           </p>
           
           <div className="w-full">
-            {/* The UserButton is now in the root layout */}
-            <Button 
-              className="w-full py-6 text-lg"
-              size="lg"
-              onClick={() => window.location.href = "/"}
-            >
-              Sign in with Civic
-            </Button>
+            <UserButton />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">

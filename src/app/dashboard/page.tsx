@@ -19,10 +19,13 @@ import {
   Receipt,
   CreditCard,
   Banknote,
+  User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
+import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
-import { useUser } from "@civic/auth-web3/react";
+import { UserButton } from "@civic/auth-web3/react";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface Transaction {
   id: string;
@@ -59,98 +62,52 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData, publicKey: authPublicKey } = useAuth();
-  const civicUser = useUser();
+  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
+  const { user: civicUserContext } = useUser();
+  const civicUser = civicUserContext?.user;
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    name: string | null;
+    email: string | null;
+    picture: string | null;
+  }>({
+    name: null,
+    email: null,
+    picture: null,
+  });
   
-  // Add debug log for auth state
+  // Initialize wallet address and civic user data
   useEffect(() => {
-    console.log('--- DASHBOARD AUTH STATE ---');
-    console.log('Auth user:', user);
-    console.log('Auth publicKey:', authPublicKey);
-    console.log('Civic user:', civicUser?.user);
-    
-    // Check localStorage
     try {
-      const storedUser = localStorage.getItem("auth_user");
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        console.log('Stored user:', userData);
-        if (userData.walletAddress) {
-          console.log('Stored wallet address:', userData.walletAddress);
-        }
+      // First set data from civicUser
+      if (civicUser) {
+        setUserProfile({
+          name: civicUser.name || userProfile.name,
+          email: civicUser.email || userProfile.email,
+          picture: civicUser.picture || userProfile.picture,
+        });
       }
-    } catch (error) {
-      console.error('Error checking localStorage:', error);
-    }
-    console.log('---------------------------');
-  }, [user, authPublicKey, civicUser?.user]);
-  
-  // Initialize wallet address from Civic context, auth context, or localStorage
-  useEffect(() => {
-    try {
-      // Get URL path parts to see if wallet is in the URL
-      const pathParts = window.location.pathname.split('/');
-      if (pathParts.length > 2 && pathParts[1] === 'dashboard') {
-        const urlWalletAddress = pathParts[2];
-        // Check that the wallet address exists and is not empty
-        if (urlWalletAddress && urlWalletAddress.trim() !== '') {
-          console.log("FOUND WALLET ADDRESS IN URL:", urlWalletAddress);
-          setWalletAddress(urlWalletAddress);
-          
-          // Update user record if we have the wallet in URL but not in user
-          if (user && !user.walletAddress) {
-            const updatedUser = {
-              ...user,
-              walletAddress: urlWalletAddress
-            };
-            localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+      
+      // Then try to get wallet address
+      if (solanaWalletAddress) {
+        setWalletAddress(solanaWalletAddress);
+      } else {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.walletAddress) {
+            setWalletAddress(parsedUser.walletAddress);
           }
-          return;
-        }
-      }
-      
-      // First priority: get from Auth context
-      if (authPublicKey) {
-        console.log("INITIALIZING WALLET ADDRESS FROM AUTH CONTEXT:", authPublicKey);
-        setWalletAddress(authPublicKey);
-        return;
-      }
-      
-      // Second priority: get from Civic context
-      const userWithWallet = civicUser?.user as any;
-      if (userWithWallet?.solana?.address) {
-        const walletAddr = userWithWallet.solana.address as string;
-        console.log("INITIALIZING WALLET ADDRESS FROM CIVIC:", walletAddr);
-        setWalletAddress(walletAddr);
-        return;
-      }
-      
-      // Third priority: get from user object
-      if (user?.walletAddress) {
-        console.log("INITIALIZING WALLET ADDRESS FROM USER:", user.walletAddress);
-        setWalletAddress(user.walletAddress);
-        return;
-      }
-      
-      // Last priority: get from localStorage
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        if (parsedUser.walletAddress) {
-          console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
-          setWalletAddress(parsedUser.walletAddress);
-          return;
         }
       }
     } catch (error) {
-      console.error("Error initializing wallet address:", error);
+      console.error("Error initializing user data:", error);
     }
-  }, [civicUser, authPublicKey, user]);
+  }, [civicUser, solanaWalletAddress, userProfile.name, userProfile.email, userProfile.picture]);
   
   // Generate wallet address if needed (only on client, after first render)
   useEffect(() => {
@@ -158,24 +115,6 @@ function DashboardContent() {
       if (walletAddress) return true; // Already have a wallet address
       
       try {
-        // If we have a Civic user but no wallet, try to create one
-        const userWithWallet = civicUser?.user as any;
-        if (userWithWallet && !userWithWallet?.solana?.address && userWithWallet?.createWallet) {
-          // Attempt to create a wallet via Civic's API
-          console.log("Creating wallet via Civic's API");
-          userWithWallet.createWallet()
-            .then(() => {
-              console.log("Wallet created successfully!");
-              // Reload to get updated context with the wallet
-              window.location.reload();
-            })
-            .catch((error: any) => {
-              console.error("Error creating wallet:", error);
-            });
-          return true;
-        }
-        
-        // Fallback to localStorage and generate a random wallet address
         const userData = localStorage.getItem("auth_user");
         if (userData) {
           const localUser = JSON.parse(userData);
@@ -197,7 +136,7 @@ function DashboardContent() {
     };
 
     ensureWalletAddress();
-  }, [walletAddress, civicUser]);
+  }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -297,9 +236,36 @@ function DashboardContent() {
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center">
-          {/* UserButton removed - it's now in the main app entry point */}
+          <UserButton />
         </div>
-        </div>
+      </div>
+
+      {/* User Profile Card */}
+      <Card className="mb-4">
+        <CardContent className="p-4 flex items-center">
+          <Avatar className="h-16 w-16 mr-4">
+            <AvatarImage src={userProfile.picture || undefined} />
+            <AvatarFallback>
+              <User className="h-8 w-8 text-gray-400" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h2 className="text-xl font-semibold">
+              {userProfile.name || "Welcome!"}
+            </h2>
+            {userProfile.email && (
+              <p className="text-gray-500 text-sm">{userProfile.email}</p>
+            )}
+            {walletAddress && (
+              <p className="text-xs font-mono mt-1 text-gray-500">
+                {walletAddress.length > 20
+                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
+                  : walletAddress}
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4">
         {/* Balance Card */}

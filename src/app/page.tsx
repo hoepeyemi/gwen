@@ -1,122 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { WaitlistForm } from "~/app/components/waitlist-form";
 import { Globe } from "~/app/components/globe";
-import { UserButton, useUser } from "@civic/auth-web3/react";
-import { useAuth } from "~/providers/auth-provider";
 
 export default function LandingPage() {
   const router = useRouter();
   const [showWaitlist, setShowWaitlist] = useState(false);
-  const civicUser = useUser();
-  const { user, publicKey: authPublicKey } = useAuth();
-  const [redirectAttempted, setRedirectAttempted] = useState(false);
-  
-  // Add debug effect to log wallet addresses
-  useEffect(() => {
-    console.log('--- DEBUG AUTH STATE ---');
-    console.log('Auth user:', user);
-    console.log('Auth publicKey:', authPublicKey);
-    console.log('Civic user:', civicUser?.user);
-    
-    // Check for Civic Solana address
-    try {
-      const userContext = civicUser?.user as any;
-      if (userContext?.solana?.address) {
-        console.log('Civic Solana address:', userContext.solana.address);
-      }
-    } catch (error) {
-      console.error('Error accessing Civic Solana address:', error);
-    }
-    
-    // Check localStorage
-    try {
-      const storedUser = localStorage.getItem("auth_user");
-      if (storedUser) {
-        const userData = JSON.parse(storedUser);
-        console.log('Stored user:', userData);
-        if (userData.walletAddress) {
-          console.log('Stored wallet address:', userData.walletAddress);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking localStorage:', error);
-    }
-    console.log('------------------------');
-  }, [user, authPublicKey, civicUser?.user]);
-  
-  // Handle redirects if the user is authenticated
-  useEffect(() => {
-    // Only attempt redirect once to avoid loops
-    if (redirectAttempted) return;
-    
-    // Add a small delay to ensure wallet has time to initialize
-    const redirectTimeout = setTimeout(() => {
-      // Only proceed if user is authenticated
-      if (user || (civicUser && civicUser.user)) {
-        setRedirectAttempted(true);
-        console.log('Attempting dashboard redirect...');
-        
-        // Check for wallet address in auth context
-        if (authPublicKey) {
-          console.log(`User is authenticated with auth publicKey: ${authPublicKey}`);
-          router.push(`/dashboard/${authPublicKey}`);
-          return;
-        }
-        
-        // Check civic user for wallet address
-        try {
-          const userWithWallet = civicUser?.user as any;
-          if (userWithWallet?.solana?.address) {
-            const walletAddress = userWithWallet.solana.address;
-            console.log(`User is authenticated with Civic solana address: ${walletAddress}`);
-            router.push(`/dashboard/${walletAddress}`);
-            return;
-          }
-        } catch (error) {
-          console.error('Error accessing Civic wallet address:', error);
-        }
-        
-        // Check user for wallet address
-        if (user?.walletAddress) {
-          console.log(`User is authenticated with stored wallet address: ${user.walletAddress}`);
-          router.push(`/dashboard/${user.walletAddress}`);
-          return;
-        }
-        
-        // Check localStorage directly as a fallback
-        try {
-          const storedUser = localStorage.getItem("auth_user");
-          if (storedUser) {
-            const userData = JSON.parse(storedUser);
-            if (userData.walletAddress) {
-              console.log(`User is authenticated with localStorage wallet address: ${userData.walletAddress}`);
-              router.push(`/dashboard/${userData.walletAddress}`);
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('Error checking localStorage for wallet address:', error);
-        }
-        
-        // Fallback: redirect to the main dashboard
-        console.log("User is authenticated, but no wallet address found. Redirecting to main dashboard.");
-        router.push("/dashboard");
-      }
-    }, 1000); // 1 second delay to allow wallet to initialize
-    
-    return () => clearTimeout(redirectTimeout);
-  }, [user, civicUser, authPublicKey, router, redirectAttempted]);
 
   return (
     <div className="relative">
-      {/* Civic Auth Button - Positioned absolutely on the page */}
-      <div className="absolute top-4 right-4 z-30">
-        <UserButton />
-      </div>
-      
       {/* Hero Section */}
       <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
         {/* Globe background with darkened overlay */}
