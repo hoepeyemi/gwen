@@ -67,9 +67,53 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   
+  // Add debug log for auth state
+  useEffect(() => {
+    console.log('--- DASHBOARD AUTH STATE ---');
+    console.log('Auth user:', user);
+    console.log('Auth publicKey:', authPublicKey);
+    console.log('Civic user:', civicUser?.user);
+    
+    // Check localStorage
+    try {
+      const storedUser = localStorage.getItem("auth_user");
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        console.log('Stored user:', userData);
+        if (userData.walletAddress) {
+          console.log('Stored wallet address:', userData.walletAddress);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking localStorage:', error);
+    }
+    console.log('---------------------------');
+  }, [user, authPublicKey, civicUser?.user]);
+  
   // Initialize wallet address from Civic context, auth context, or localStorage
   useEffect(() => {
     try {
+      // Get URL path parts to see if wallet is in the URL
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts.length > 2 && pathParts[1] === 'dashboard') {
+        const urlWalletAddress = pathParts[2];
+        // Check that the wallet address exists and is not empty
+        if (urlWalletAddress && urlWalletAddress.trim() !== '') {
+          console.log("FOUND WALLET ADDRESS IN URL:", urlWalletAddress);
+          setWalletAddress(urlWalletAddress);
+          
+          // Update user record if we have the wallet in URL but not in user
+          if (user && !user.walletAddress) {
+            const updatedUser = {
+              ...user,
+              walletAddress: urlWalletAddress
+            };
+            localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+          }
+          return;
+        }
+      }
+      
       // First priority: get from Auth context
       if (authPublicKey) {
         console.log("INITIALIZING WALLET ADDRESS FROM AUTH CONTEXT:", authPublicKey);
@@ -80,8 +124,9 @@ function DashboardContent() {
       // Second priority: get from Civic context
       const userWithWallet = civicUser?.user as any;
       if (userWithWallet?.solana?.address) {
-        console.log("INITIALIZING WALLET ADDRESS FROM CIVIC:", userWithWallet.solana.address);
-        setWalletAddress(userWithWallet.solana.address);
+        const walletAddr = userWithWallet.solana.address as string;
+        console.log("INITIALIZING WALLET ADDRESS FROM CIVIC:", walletAddr);
+        setWalletAddress(walletAddr);
         return;
       }
       

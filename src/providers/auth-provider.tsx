@@ -243,26 +243,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }, [civicError, router]);
 
-    // Get the publicKey from the wallet
+    // Get the publicKey from the wallet - this runs on every wallet change
     useEffect(() => {
       // Cast wallet to any to access publicKey
       const solanaWallet = wallet as any;
       if (solanaWallet && solanaWallet.publicKey) {
-        console.log("Setting publicKey from wallet:", solanaWallet.publicKey.toString());
-        setPublicKey(solanaWallet.publicKey.toString());
+        const walletAddress = solanaWallet.publicKey.toString();
+        console.log("Setting publicKey from wallet:", walletAddress);
         
-        // Update user data with wallet address if we have a user
-        if (user) {
-          const updatedUser = { 
-            ...user, 
-            walletAddress: solanaWallet.publicKey.toString()
+        // Update both state values to ensure consistency
+        setPublicKey(walletAddress);
+        setSolanaWalletAddress(walletAddress);
+        
+        // Always update localStorage to ensure it's up-to-date
+        const storedUser = localStorage.getItem("auth_user");
+        let updatedUser;
+        
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            updatedUser = { 
+              ...userData, 
+              walletAddress: walletAddress
+            };
+          } catch (error) {
+            console.error("Error parsing stored user:", error);
+            updatedUser = { 
+              id: 0,
+              walletAddress: walletAddress
+            };
+          }
+        } else {
+          // Create minimal user data if none exists
+          updatedUser = { 
+            id: 0,
+            walletAddress: walletAddress
           };
-          
-          setUser(updatedUser);
-          localStorage.setItem("auth_user", JSON.stringify(updatedUser));
         }
+        
+        // Update state and localStorage
+        setUser(updatedUser);
+        localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+        
+        // Debug - display user data after update
+        console.log("Updated user data with wallet address:", updatedUser);
       }
-    }, [wallet, user]);
+    }, [wallet]);
 
     // Handle wallet creation and management
     useEffect(() => {
@@ -277,8 +303,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Cast wallet to any to access publicKey
           const solanaWallet = wallet as any;
           if (solanaWallet && solanaWallet.publicKey) {
-            console.log("Wallet already connected:", solanaWallet.publicKey.toString());
-            setSolanaWalletAddress(solanaWallet.publicKey.toString());
+            const walletAddress = solanaWallet.publicKey.toString();
+            console.log("Wallet already connected:", walletAddress);
+            setSolanaWalletAddress(walletAddress);
+            setPublicKey(walletAddress);
+            
+            // Update our user with the wallet address
+            if (user) {
+              const updatedUser = {
+                ...user,
+                walletAddress: walletAddress
+              };
+              setUser(updatedUser);
+              localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+            } else {
+              // If we don't have a user yet but do have a wallet, create a minimal user
+              const minimalUser = {
+                id: 0,
+                walletAddress: walletAddress
+              };
+              setUser(minimalUser);
+              localStorage.setItem("auth_user", JSON.stringify(minimalUser));
+            }
             return;
           }
           
