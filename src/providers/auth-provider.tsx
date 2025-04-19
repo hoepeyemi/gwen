@@ -318,6 +318,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error("Error reading existing user data:", error);
       }
 
+      // Log Civic user data for debugging
+      console.log("Civic user data:", civicUser);
+
       // Update our user state with Civic user data
       const userData: User = {
         id: parseInt(civicUser.id || '0'),
@@ -329,8 +332,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         hashedPin: existingHashedPin,
       };
 
-      // Store in local storage
-      localStorage.setItem("auth_user", JSON.stringify(userData));
+      // Store in local storage with additional picture field if available
+      const enhancedUserData = {
+        ...userData,
+        picture: civicUser.picture || null,
+      };
+      
+      localStorage.setItem("auth_user", JSON.stringify(enhancedUserData));
       
       // Update state
       setUser(userData);
