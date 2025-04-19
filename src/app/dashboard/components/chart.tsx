@@ -39,8 +39,8 @@ export function Chart() {
   const maxValue = Math.max(...data[period].map(item => item.value));
   
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end space-x-2">
+    <div className="space-y-4 w-full">
+      <div className="flex justify-center sm:justify-end space-x-2">
         {(["1w", "1m", "3m", "1y"] as const).map((p) => (
           <button
             key={p}
@@ -56,18 +56,18 @@ export function Chart() {
         ))}
       </div>
       
-      <div className="h-40 w-full">
-        <div className="flex h-full items-end justify-between">
+      <div className="h-40 sm:h-56 w-full">
+        <div className="flex h-full items-end justify-between px-2">
           {data[period].map((item, index) => (
             <div key={index} className="flex h-full flex-col items-center justify-end">
               <div 
-                className="w-8 bg-blue-500 rounded-t-sm transition-all duration-300"
+                className="w-5 sm:w-8 bg-blue-500 rounded-t-sm transition-all duration-300"
                 style={{ 
                   height: `${(item.value / maxValue) * 80}%`,
                   opacity: 0.6 + (item.value / maxValue) * 0.4,
                 }}
               />
-              <div className="mt-2 text-xs text-gray-500">{item.day}</div>
+              <div className="mt-2 text-[10px] sm:text-xs text-gray-500">{item.day}</div>
             </div>
           ))}
         </div>

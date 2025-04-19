@@ -96,7 +96,7 @@ function DashboardContent() {
           picture: parsedUser.picture || null,
         });
         
-        // Update wallet address from localStorage
+        // Update wallet address from localStorage if it exists
         if (parsedUser.walletAddress) {
           setWalletAddress(parsedUser.walletAddress);
         }
@@ -122,35 +122,6 @@ function DashboardContent() {
       setIsLoadingAuth(false);
     }
   }, [civicUser, solanaWalletAddress]);
-  
-  // Generate wallet address if needed (only on client, after first render)
-  useEffect(() => {
-    const ensureWalletAddress = () => {
-      if (walletAddress) return true; // Already have a wallet address
-      
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const localUser = JSON.parse(userData);
-          if (!localUser.walletAddress) {
-            // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-            localUser.walletAddress = newAddress;
-            localStorage.setItem("auth_user", JSON.stringify(localUser));
-            console.log("WALLET ADDRESS GENERATION:", newAddress);
-            setWalletAddress(newAddress);
-            return true;
-          }
-        }
-        return false;
-      } catch (error) {
-        console.error("Error ensuring wallet address:", error);
-        return false;
-      }
-    };
-
-    ensureWalletAddress();
-  }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -182,7 +153,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-              } else {
+    } else {
       router.push("/receive");
     }
   };
@@ -191,7 +162,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      toast.error("No wallet address found");
+      toast.error("Please connect your wallet first");
     }
   };
 
@@ -199,7 +170,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      toast.error("No wallet address found");
+      toast.error("Please connect your wallet first");
     }
   };
 
@@ -210,8 +181,8 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-            } else {
-      toast.error("No wallet address found");
+    } else {
+      toast.error("Please connect your wallet first");
     }
   };
 
@@ -219,7 +190,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}`);
     } else {
-      router.push("/wallet");
+      toast.error("Please connect your wallet first");
     }
   };
 
@@ -236,12 +207,20 @@ function DashboardContent() {
   // If no user profile is found in localStorage, show sign in message
   if (!userProfile.name && !userProfile.email) {
     return (
-      <div className="container mt-10 max-w-md mx-auto text-center">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="container px-4 py-8 mx-auto max-w-md flex items-center justify-center min-h-[80vh]">
+        <Card className="w-full">
+          <CardContent className="pt-6 pb-6 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="h-14 w-14 bg-gray-100 rounded-full flex items-center justify-center">
+                <User className="h-8 w-8 text-gray-400" />
+              </div>
+            </div>
             <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
-            <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
-            <Button onClick={() => router.push("/auth/signin")}>
+            <p className="text-gray-600 mb-6">Please sign in to view your dashboard</p>
+            <Button 
+              onClick={() => router.push("/auth/signin")}
+              className="w-full sm:w-auto"
+            >
               Sign In
             </Button>
           </CardContent>
@@ -251,9 +230,9 @@ function DashboardContent() {
   }
 
   return (
-    <div className="container px-4 mx-auto">
-      <div className="mb-6 mt-2 flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="container px-4 py-4 mx-auto max-w-5xl">
+      <div className="mb-4 mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4 sm:mb-0">Dashboard</h1>
         <div className="flex items-center">
           <UserButton />
         </div>
@@ -261,25 +240,35 @@ function DashboardContent() {
 
       {/* User Profile Card */}
       <Card className="mb-4">
-        <CardContent className="p-4 flex items-center">
-          <Avatar className="h-16 w-16 mr-4">
+        <CardContent className="p-4 flex flex-col sm:flex-row items-center">
+          <Avatar className="h-16 w-16 mb-4 sm:mb-0 sm:mr-4">
             <AvatarImage src={userProfile.picture || undefined} />
             <AvatarFallback>
               <User className="h-8 w-8 text-gray-400" />
             </AvatarFallback>
           </Avatar>
-          <div>
+          <div className="text-center sm:text-left">
             <h2 className="text-xl font-semibold">
               {userProfile.name || "Welcome!"}
             </h2>
             {userProfile.email && (
               <p className="text-gray-500 text-sm">{userProfile.email}</p>
             )}
-            {walletAddress && (
+            {walletAddress ? (
               <p className="text-xs font-mono mt-1 text-gray-500">
                 {walletAddress.length > 20
                   ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
                   : walletAddress}
+              </p>
+            ) : (
+              <p className="text-xs mt-1 text-gray-500">
+                <Button 
+                  variant="link" 
+                  className="h-auto p-0 text-xs"
+                  onClick={() => router.push("/wallet")}
+                >
+                  Connect wallet
+                </Button>
               </p>
             )}
           </div>
@@ -300,10 +289,10 @@ function DashboardContent() {
             </Button>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold">
+            <div className="text-2xl sm:text-3xl font-bold">
               {showBalance ? formatCurrency(balance) : "********"}
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               <Button
                 onClick={handleReceive}
                 className="flex flex-col items-center h-auto py-2 text-xs"
@@ -312,15 +301,15 @@ function DashboardContent() {
                 <ArrowDown className="h-4 w-4 mb-1" />
                 Receive
               </Button>
-            <Button 
+              <Button 
                 onClick={handleSend}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
+                variant="outline" 
               >
                 <ArrowUp className="h-4 w-4 mb-1" />
-              Send
-            </Button>
-            <Button 
+                Send
+              </Button>
+              <Button 
                 onClick={handleWallet}
                 className="flex flex-col items-center h-auto py-2 text-xs"
                 variant="outline"
@@ -331,41 +320,41 @@ function DashboardContent() {
               <Button
                 onClick={handlePayBills}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
-            >
+                variant="outline" 
+              >
                 <Receipt className="h-4 w-4 mb-1" />
                 Bills
-            </Button>
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Investments and Banking */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Investment Card */}
           <Card>
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-base font-semibold">Invest</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <div className="flex items-center mb-3 sm:mb-0">
                   <Leaf className="h-6 w-6 text-green-500 mr-2" />
                   <div>
                     <p className="font-medium">Earn 8%</p>
                     <p className="text-xs text-gray-500">Sustainable funds</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   onClick={handleInvestments}
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto"
                 >
                   <ArrowUpRight className="h-4 w-4 mr-1" /> Invest
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Banking Card */}
           <Card>
@@ -373,26 +362,26 @@ function DashboardContent() {
               <CardTitle className="text-base font-semibold">Banking</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                <div className="flex items-center mb-3 sm:mb-0">
                   <Landmark className="h-6 w-6 text-blue-500 mr-2" />
                   <div>
                     <p className="font-medium">Connect Bank</p>
                     <p className="text-xs text-gray-500">Fast transfers</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleConnectBank}
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto"
                 >
                   Connect
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
-            </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Chart */}
         <Card>
@@ -400,7 +389,9 @@ function DashboardContent() {
             <CardTitle className="text-base font-semibold">Activity Overview</CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <Chart />
+            <div className="h-60 sm:h-72">
+              <Chart />
+            </div>
           </CardContent>
         </Card>
 
@@ -411,17 +402,17 @@ function DashboardContent() {
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <Tabs defaultValue="all">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="sent">Sent</TabsTrigger>
-                <TabsTrigger value="received">Received</TabsTrigger>
-        </TabsList>
+              <TabsList className="mb-4 w-full">
+                <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+                <TabsTrigger value="sent" className="flex-1">Sent</TabsTrigger>
+                <TabsTrigger value="received" className="flex-1">Received</TabsTrigger>
+              </TabsList>
               <TabsContent value="all">
                 <div className="space-y-4">
                   {transactions.map((transaction) => (
                     <div
                       key={transaction.id}
-                      className="flex items-center justify-between"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50"
                     >
                       <div className="flex items-center">
                         <div
@@ -457,7 +448,7 @@ function DashboardContent() {
                         </div>
                       </div>
                       <div
-                        className={`text-sm font-semibold ${
+                        className={`text-sm font-semibold ml-14 sm:ml-0 ${
                           transaction.type === "send"
                             ? "text-red-500"
                             : "text-green-500"
@@ -467,9 +458,9 @@ function DashboardContent() {
                         {formatCurrency(transaction.amount)}
                       </div>
                     </div>
-              ))}
-            </div>
-        </TabsContent>
+                  ))}
+                </div>
+              </TabsContent>
               <TabsContent value="sent">
                 <div className="space-y-4">
                   {transactions
@@ -477,7 +468,7 @@ function DashboardContent() {
                     .map((transaction) => (
                       <div
                         key={transaction.id}
-                        className="flex items-center justify-between"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -489,10 +480,10 @@ function DashboardContent() {
                             </p>
                             <p className="text-xs text-gray-500">
                               {transaction.date}
-                </p>
-              </div>
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-sm font-semibold text-red-500">
+                        <div className="text-sm font-semibold ml-14 sm:ml-0 text-red-500">
                           -{formatCurrency(transaction.amount)}
                         </div>
                       </div>
@@ -506,7 +497,7 @@ function DashboardContent() {
                     .map((transaction) => (
                       <div
                         key={transaction.id}
-                        className="flex items-center justify-between"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -518,19 +509,19 @@ function DashboardContent() {
                             </p>
                             <p className="text-xs text-gray-500">
                               {transaction.date}
-                  </p>
-                </div>
-              </div>
-                        <div className="text-sm font-semibold text-green-500">
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold ml-14 sm:ml-0 text-green-500">
                           +{formatCurrency(transaction.amount)}
-                </div>
-                </div>
+                        </div>
+                      </div>
                     ))}
                 </div>
               </TabsContent>
             </Tabs>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -539,11 +530,30 @@ function DashboardContent() {
 // Loading fallback component
 function DashboardLoading() {
   return (
-    <div className="container mt-10 max-w-7xl mx-auto">
-      <div className="flex flex-col space-y-4 animate-pulse">
-        <div className="h-16 bg-gray-200 rounded-lg"></div>
-        <div className="h-64 bg-gray-200 rounded-lg"></div>
+    <div className="container px-4 py-8 mx-auto max-w-5xl">
+      <div className="flex flex-col space-y-6 animate-pulse">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+          <div className="h-8 w-40 bg-gray-200 rounded-lg mb-4 sm:mb-0"></div>
+          <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+        </div>
+        
+        {/* User profile card skeleton */}
+        <div className="h-24 sm:h-20 bg-gray-200 rounded-lg"></div>
+        
+        {/* Balance card skeleton */}
         <div className="h-32 bg-gray-200 rounded-lg"></div>
+        
+        {/* Two column cards skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="h-24 bg-gray-200 rounded-lg"></div>
+          <div className="h-24 bg-gray-200 rounded-lg"></div>
+        </div>
+        
+        {/* Chart skeleton */}
+        <div className="h-64 bg-gray-200 rounded-lg"></div>
+        
+        {/* Transactions skeleton */}
+        <div className="h-64 bg-gray-200 rounded-lg"></div>
       </div>
     </div>
   );
