@@ -1,77 +1,177 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
+
+const data = [
+  {
+    name: "Jan",
+    expenses: 4000,
+    income: 2400,
+  },
+  {
+    name: "Feb",
+    expenses: 3000,
+    income: 1398,
+  },
+  {
+    name: "Mar",
+    expenses: 2000,
+    income: 9800,
+  },
+  {
+    name: "Apr",
+    expenses: 2780,
+    income: 3908,
+  },
+  {
+    name: "May",
+    expenses: 1890,
+    income: 4800,
+  },
+  {
+    name: "Jun",
+    expenses: 2390,
+    income: 3800,
+  },
+  {
+    name: "Jul",
+    expenses: 3490,
+    income: 4300,
+  },
+];
 
 export function Chart() {
-  const [period, setPeriod] = useState<"1w" | "1m" | "3m" | "1y">("1m");
-  
-  // Would normally come from a data API
-  const data = {
-    "1w": [
-      { day: "M", value: 75 },
-      { day: "T", value: 60 },
-      { day: "W", value: 80 },
-      { day: "T", value: 65 },
-      { day: "F", value: 90 },
-      { day: "S", value: 70 },
-      { day: "S", value: 55 },
-    ],
-    "1m": [
-      { day: "W1", value: 65 },
-      { day: "W2", value: 75 },
-      { day: "W3", value: 45 },
-      { day: "W4", value: 85 },
-    ],
-    "3m": [
-      { day: "Jan", value: 50 },
-      { day: "Feb", value: 65 },
-      { day: "Mar", value: 80 },
-    ],
-    "1y": [
-      { day: "Q1", value: 55 },
-      { day: "Q2", value: 70 },
-      { day: "Q3", value: 65 },
-      { day: "Q4", value: 90 },
-    ],
-  };
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Find the max value for scaling
-  const maxValue = Math.max(...data[period].map(item => item.value));
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    // Set initial value
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
   
   return (
-    <div className="space-y-4 w-full">
-      <div className="flex justify-center sm:justify-end space-x-2">
-        {(["1w", "1m", "3m", "1y"] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`px-2 py-1 rounded text-xs ${
-              period === p
-                ? "bg-blue-100 text-blue-700 font-medium"
-                : "text-gray-500 hover:bg-gray-100"
-            }`}
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-      
-      <div className="h-40 sm:h-56 w-full">
-        <div className="flex h-full items-end justify-between px-2">
-          {data[period].map((item, index) => (
-            <div key={index} className="flex h-full flex-col items-center justify-end">
-              <div 
-                className="w-5 sm:w-8 bg-blue-500 rounded-t-sm transition-all duration-300"
-                style={{ 
-                  height: `${(item.value / maxValue) * 80}%`,
-                  opacity: 0.6 + (item.value / maxValue) * 0.4,
+    <Card className="col-span-4 border shadow-sm">
+      <CardHeader className="p-3 sm:p-6">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-sm sm:text-base">Financial Overview</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Your income and expenses for the last 7 months
+            </CardDescription>
+          </div>
+          <div className="mt-2 sm:mt-0 flex flex-wrap gap-2">
+            <div className="flex items-center">
+              <div className="h-3 w-3 rounded-full bg-blue-500 mr-1.5"></div>
+              <span className="text-xs text-muted-foreground">Income</span>
+            </div>
+            <div className="flex items-center ml-3">
+              <div className="h-3 w-3 rounded-full bg-red-500 mr-1.5"></div>
+              <span className="text-xs text-muted-foreground">Expenses</span>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-2 sm:px-6 pb-6">
+        <div className="h-[240px] sm:h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{
+                top: 5,
+                right: isMobile ? 5 : 20,
+                left: isMobile ? -20 : 0,
+                bottom: 5,
+              }}
+            >
+              <defs>
+                <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+              <XAxis 
+                dataKey="name" 
+                tick={{ fontSize: isMobile ? 10 : 12 }}
+                tickMargin={isMobile ? 5 : 10}
+              />
+              <YAxis 
+                tick={{ fontSize: isMobile ? 10 : 12 }} 
+                tickFormatter={value => `$${value}`}
+                width={isMobile ? 35 : 50}
+              />
+              <Tooltip 
+                formatter={(value) => [`$${value}`, '']}
+                contentStyle={{ 
+                  fontSize: isMobile ? 10 : 12,
+                  padding: isMobile ? '4px 8px' : '8px 12px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                }}
+                labelStyle={{
+                  fontWeight: 'bold',
+                  marginBottom: isMobile ? 2 : 4
                 }}
               />
-              <div className="mt-2 text-[10px] sm:text-xs text-gray-500">{item.day}</div>
-            </div>
-          ))}
+              <Area
+                type="monotone"
+                dataKey="income"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ r: isMobile ? 2 : 3, fill: "#3b82f6" }}
+                activeDot={{ r: isMobile ? 4 : 6 }}
+                fillOpacity={1}
+                fill="url(#colorIncome)"
+                name="Income"
+              />
+              <Area
+                type="monotone"
+                dataKey="expenses"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={{ r: isMobile ? 2 : 3, fill: "#ef4444" }}
+                activeDot={{ r: isMobile ? 4 : 6 }}
+                fillOpacity={1}
+                fill="url(#colorExpenses)"
+                name="Expenses"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 } 

@@ -190,9 +190,9 @@ function DashboardContent() {
   // If no user is signed in, show a message
   if (!user) {
     return (
-      <div className="container mt-10 max-w-md mx-auto text-center">
-        <Card>
-          <CardContent className="pt-6">
+      <div className="container mt-6 max-w-sm mx-auto px-4">
+        <Card className="border shadow-sm">
+          <CardContent className="pt-6 px-4 pb-4">
             <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
             <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
             <Button onClick={() => router.push("/auth/signin")}>
@@ -205,32 +205,32 @@ function DashboardContent() {
   }
 
   return (
-    <div className="container px-4 mx-auto">
-      <div className="mb-6 mt-2 flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="container px-4 mx-auto max-w-6xl">
+      <div className="sticky top-0 z-10 mb-4 mt-2 flex items-center justify-between py-2 bg-white/80 backdrop-blur-sm">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center">
           <UserButton />
         </div>
-        </div>
+      </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 md:gap-6">
         {/* Balance Card */}
-        <Card>
-          <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+        <Card className="border shadow-sm">
+          <CardHeader className="p-3 sm:p-4 pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-base font-semibold">Balance</CardTitle>
             <Button variant="ghost" size="icon" onClick={toggleBalanceVisibility}>
-                {showBalance ? (
+              {showBalance ? (
                 <EyeOff className="h-4 w-4" />
               ) : (
                 <Eye className="h-4 w-4" />
               )}
             </Button>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-2xl sm:text-3xl font-bold">
               {showBalance ? formatCurrency(balance) : "********"}
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-3 sm:mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               <Button
                 onClick={handleReceive}
                 className="flex flex-col items-center h-auto py-2 text-xs"
@@ -239,15 +239,15 @@ function DashboardContent() {
                 <ArrowDown className="h-4 w-4 mb-1" />
                 Receive
               </Button>
-            <Button 
+              <Button 
                 onClick={handleSend}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
+                variant="outline" 
               >
                 <ArrowUp className="h-4 w-4 mb-1" />
-              Send
-            </Button>
-            <Button 
+                Send
+              </Button>
+              <Button 
                 onClick={handleWallet}
                 className="flex flex-col items-center h-auto py-2 text-xs"
                 variant="outline"
@@ -258,101 +258,127 @@ function DashboardContent() {
               <Button
                 onClick={handlePayBills}
                 className="flex flex-col items-center h-auto py-2 text-xs"
-              variant="outline" 
-            >
+                variant="outline" 
+              >
                 <Receipt className="h-4 w-4 mb-1" />
                 Bills
-            </Button>
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Investments and Banking */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Mobile-optimized grid layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {/* Investment Card */}
-          <Card>
-            <CardHeader className="p-4 pb-2">
+          <Card className="border shadow-sm">
+            <CardHeader className="p-3 sm:p-4 pb-2">
               <CardTitle className="text-base font-semibold">Invest</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="flex items-center justify-between flex-wrap sm:flex-nowrap gap-2">
                 <div className="flex items-center">
-                  <Leaf className="h-6 w-6 text-green-500 mr-2" />
+                  <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-green-500 mr-2" />
                   <div>
-                    <p className="font-medium">Earn 8%</p>
+                    <p className="font-medium text-sm sm:text-base">Earn 8%</p>
                     <p className="text-xs text-gray-500">Sustainable funds</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   onClick={handleInvestments}
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto mt-1 sm:mt-0"
                 >
                   <ArrowUpRight className="h-4 w-4 mr-1" /> Invest
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Banking Card */}
-          <Card>
-            <CardHeader className="p-4 pb-2">
+          <Card className="border shadow-sm">
+            <CardHeader className="p-3 sm:p-4 pb-2">
               <CardTitle className="text-base font-semibold">Banking</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="flex items-center justify-between flex-wrap sm:flex-nowrap gap-2">
                 <div className="flex items-center">
-                  <Landmark className="h-6 w-6 text-blue-500 mr-2" />
+                  <Landmark className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 mr-2" />
                   <div>
-                    <p className="font-medium">Connect Bank</p>
+                    <p className="font-medium text-sm sm:text-base">Connect Bank</p>
                     <p className="text-xs text-gray-500">Fast transfers</p>
                   </div>
-            </div>
+                </div>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleConnectBank}
-                  className="h-8"
+                  className="h-8 w-full sm:w-auto mt-1 sm:mt-0"
                 >
                   Connect
                 </Button>
-            </div>
-          </CardContent>
-        </Card>
-            </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Bills Card - New for mobile optimization */}
+          <Card className="border shadow-sm sm:col-span-2 md:col-span-1">
+            <CardHeader className="p-3 sm:p-4 pb-2">
+              <CardTitle className="text-base font-semibold">Quick Pay</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500 mr-2" />
+                  <div>
+                    <p className="font-medium text-sm sm:text-base">Pay Bills</p>
+                    <p className="text-xs text-gray-500">No late fees</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePayBills}
+                  className="h-8"
+                >
+                  Pay
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Chart */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
+        <Card className="border shadow-sm">
+          <CardHeader className="p-3 sm:p-4 pb-2">
             <CardTitle className="text-base font-semibold">Activity Overview</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-3 sm:p-4 pt-0">
             <Chart />
           </CardContent>
         </Card>
 
         {/* Transactions */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
+        <Card className="border shadow-sm">
+          <CardHeader className="p-3 sm:p-4 pb-2">
             <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
+          <CardContent className="p-3 sm:p-4 pt-0">
             <Tabs defaultValue="all">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="sent">Sent</TabsTrigger>
-                <TabsTrigger value="received">Received</TabsTrigger>
-        </TabsList>
+              <TabsList className="mb-4 w-full">
+                <TabsTrigger className="flex-1" value="all">All</TabsTrigger>
+                <TabsTrigger className="flex-1" value="sent">Sent</TabsTrigger>
+                <TabsTrigger className="flex-1" value="received">Received</TabsTrigger>
+              </TabsList>
               <TabsContent value="all">
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {transactions.map((transaction) => (
                     <div
                       key={transaction.id}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between hover:bg-gray-50 rounded-lg p-2"
                     >
                       <div className="flex items-center">
                         <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center ${
                             transaction.type === "send"
                               ? "bg-red-100"
                               : "bg-green-100"
@@ -360,7 +386,7 @@ function DashboardContent() {
                         >
                           {transaction.type === "send" ? (
                             <ArrowUp
-                              className={`h-5 w-5 ${
+                              className={`h-4 w-4 sm:h-5 sm:w-5 ${
                                 transaction.type === "send"
                                   ? "text-red-500"
                                   : "text-green-500"
@@ -368,12 +394,12 @@ function DashboardContent() {
                             />
                           ) : (
                             <ArrowDown
-                              className="h-5 w-5 text-green-500"
+                              className="h-4 w-4 sm:h-5 sm:w-5 text-green-500"
                             />
                           )}
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium">
+                        <div className="ml-2 sm:ml-3">
+                          <p className="text-xs sm:text-sm font-medium">
                             {transaction.type === "send"
                               ? `Sent to ${transaction.recipient}`
                               : `Received from ${transaction.recipient}`}
@@ -384,7 +410,7 @@ function DashboardContent() {
                         </div>
                       </div>
                       <div
-                        className={`text-sm font-semibold ${
+                        className={`text-xs sm:text-sm font-semibold ${
                           transaction.type === "send"
                             ? "text-red-500"
                             : "text-green-500"
@@ -394,11 +420,11 @@ function DashboardContent() {
                         {formatCurrency(transaction.amount)}
                       </div>
                     </div>
-              ))}
-            </div>
-        </TabsContent>
+                  ))}
+                </div>
+              </TabsContent>
               <TabsContent value="sent">
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {transactions
                     .filter((t) => t.type === "send")
                     .map((transaction) => (
@@ -407,11 +433,11 @@ function DashboardContent() {
                         className="flex items-center justify-between"
                       >
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                            <ArrowUp className="h-5 w-5 text-red-500" />
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
                           </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium">
+                          <div className="ml-2 sm:ml-3">
+                            <p className="text-xs sm:text-sm font-medium">
                               Sent to {transaction.recipient}
                             </p>
                             <p className="text-xs text-gray-500">
@@ -419,7 +445,7 @@ function DashboardContent() {
                 </p>
               </div>
                         </div>
-                        <div className="text-sm font-semibold text-red-500">
+                        <div className="text-xs sm:text-sm font-semibold text-red-500">
                           -{formatCurrency(transaction.amount)}
                         </div>
                       </div>
@@ -427,7 +453,7 @@ function DashboardContent() {
                 </div>
               </TabsContent>
               <TabsContent value="received">
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {transactions
                     .filter((t) => t.type === "receive")
                     .map((transaction) => (
@@ -436,11 +462,11 @@ function DashboardContent() {
                         className="flex items-center justify-between"
                       >
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                            <ArrowDown className="h-5 w-5 text-green-500" />
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
                           </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium">
+                          <div className="ml-2 sm:ml-3">
+                            <p className="text-xs sm:text-sm font-medium">
                               Received from {transaction.recipient}
                             </p>
                             <p className="text-xs text-gray-500">
@@ -448,7 +474,7 @@ function DashboardContent() {
                   </p>
                 </div>
               </div>
-                        <div className="text-sm font-semibold text-green-500">
+                        <div className="text-xs sm:text-sm font-semibold text-green-500">
                           +{formatCurrency(transaction.amount)}
                 </div>
                 </div>
@@ -456,8 +482,8 @@ function DashboardContent() {
                 </div>
               </TabsContent>
             </Tabs>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -466,11 +492,11 @@ function DashboardContent() {
 // Loading fallback component
 function DashboardLoading() {
   return (
-    <div className="container mt-10 max-w-7xl mx-auto">
+    <div className="container mt-6 px-4 mx-auto">
       <div className="flex flex-col space-y-4 animate-pulse">
-        <div className="h-16 bg-gray-200 rounded-lg"></div>
-        <div className="h-64 bg-gray-200 rounded-lg"></div>
-        <div className="h-32 bg-gray-200 rounded-lg"></div>
+        <div className="h-12 bg-gray-200 rounded-lg"></div>
+        <div className="h-48 sm:h-64 bg-gray-200 rounded-lg"></div>
+        <div className="h-24 sm:h-32 bg-gray-200 rounded-lg"></div>
       </div>
     </div>
   );

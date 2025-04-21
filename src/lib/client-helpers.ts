@@ -33,8 +33,16 @@ export const fundKeypair = new Promise<Keypair>(async (resolve) => {
 
     resolve(keypair)
 })
-export const fundPubkey = (await fundKeypair).publicKey()
-export const fundSigner = basicNodeSigner(await fundKeypair, env.NEXT_PUBLIC_NETWORK_PASSPHRASE || DEFAULT_NETWORK_PASSPHRASE)
+
+// Replace top-level await with Promise-based approach
+export let fundPubkey: string;
+export let fundSigner: ReturnType<typeof basicNodeSigner>;
+
+// Initialize these values when the promise resolves
+fundKeypair.then(keypair => {
+    fundPubkey = keypair.publicKey();
+    fundSigner = basicNodeSigner(keypair, env.NEXT_PUBLIC_NETWORK_PASSPHRASE || DEFAULT_NETWORK_PASSPHRASE);
+});
 
 export const account = new PasskeyKit({
     rpcUrl: env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL,
