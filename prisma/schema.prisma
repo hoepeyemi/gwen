@@ -50,15 +50,26 @@ model AuthSession {
 }
 
 model KYC {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  authSessionId Int
-  status        String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  sep12Id       String?
-  authSession   AuthSession @relation(fields: [authSessionId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
+  id                 Int         @id @default(autoincrement())
+  userId             Int
+  authSessionId      Int
+  status             String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  sep12Id            String?
+  first_name         String?
+  last_name          String?
+  email_address      String?
+  bank_account_number String?
+  bank_number        String?
+  photo_id_front     Bytes?      // Storing ID front as bytes directly in DB
+  photo_id_back      Bytes?      // Storing ID back as bytes directly in DB
+  phone_number       String?
+  address            String?
+  photo_id_front_type String?    // Store the file type/content-type
+  photo_id_back_type  String?    // Store the file type/content-type
+  authSession        AuthSession @relation(fields: [authSessionId], references: [id])
+  user               User        @relation(fields: [userId], references: [id])
 
   @@index([userId], map: "kyc_user_idx")
 }
@@ -159,17 +170,23 @@ model Waitlist {
 
 enum TransferStatus {
   PENDING
+  APPROVED
+  DECLINED
   COMPLETED
-  CANCELLED
+  FAILED
 }
 
 enum Currency {
+  GBP
   USD
   EUR
-  GBP
+  CNY
   MXN
+  CAD
+  PHP
 }
 
 enum CurrencyType {
+  CRYPTO
   FIAT
 }

@@ -101,47 +101,74 @@ const KYCForm: FC = () => {
       setStep(step + 1);
     } else {
       setLoading(true);
-      const { photo_id_front, photo_id_back, ...stringFields } = formData;
-      const sep12Id = await putKyc
-        .mutateAsync({
+      try {
+        const { photo_id_front, photo_id_back, ...stringFields } = formData;
+        
+        // First submit text data
+        const sep12Id = await putKyc.mutateAsync({
           type: isReceiver ? "receiver" : "sender",
           transferId: String(transferId),
           fields: stringFields,
-        })
-        .catch(() => setLoading(false));
-      const { url, config } = await kycFileConfig.mutateAsync({
-        type: isReceiver ? "receiver" : "sender",
-        transferId: String(transferId),
-      });
-      console.log("url", url);
-      console.log("config", config);
-      try {
-        const formData = new FormData();
-        if (sep12Id) {
-          formData.append("id", sep12Id);
+        });
+        
+        // Then handle file uploads directly to database
+        if (photo_id_front || photo_id_back) {
+          // Convert files to base64
+          const photoIdFrontBase64 = photo_id_front ? await fileToBase64(photo_id_front) : undefined;
+          const photoIdBackBase64 = photo_id_back ? await fileToBase64(photo_id_back) : undefined;
+          
+          // Upload files to our database
+          try {
+            // Use direct fetch to avoid tRPC API issues
+            const kycResult = await fetch('/api/trpc/stellar.kycUploadFiles', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                json: {
+                  type: isReceiver ? "receiver" : "sender",
+                  transferId: String(transferId),
+                  photoIdFront: photoIdFrontBase64,
+                  photoIdFrontType: photo_id_front?.type,
+                  photoIdBack: photoIdBackBase64,
+                  photoIdBackType: photo_id_back?.type,
+                  sep12Id: sep12Id
+                }
+              }),
+            });
+            
+            if (!kycResult.ok) {
+              throw new Error(`Failed to upload KYC files: ${kycResult.statusText}`);
+            }
+          } catch (uploadError) {
+            console.error('Error uploading KYC files:', uploadError);
+            // Continue anyway since we've already saved the text data
+          }
         }
-        if (photo_id_front) {
-          formData.append("photo_id_front", photo_id_front);
-        }
-        if (photo_id_back) {
-          formData.append("photo_id_back", photo_id_back);
-        }
-        if (url && config) {
-          await axios.put(url, formData, config).catch(() => setLoading(false));
-        }
+        
+        // Display success message and redirect
+        clickFeedback("success");
+        toast.success("Account Details Submitted!");
+        
+        // Redirect to next page
+        window.location.href = `/payment-link/${String(transferId)}?${new URLSearchParams(searchParams).toString()}`;
+      } catch (error) {
+        console.error('Error submitting KYC data:', error);
+        setError("Failed to submit your information. Please try again.");
         setLoading(false);
-      } catch (e) {
-        setLoading(false);
-        console.log(e);
-        toast.error("Error submitting files");
-        throw e;
       }
-      clickFeedback("success");
-      toast.success("Account Details Submitted!");
-
-      window.location.href = `/payment-link/${String(transferId)}?${new URLSearchParams(searchParams).toString()}`;
-      // Here you would typically send the form data to your backend
     }
+  };
+  
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+    });
   };
 
   return (

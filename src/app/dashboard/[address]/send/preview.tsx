@@ -220,16 +220,13 @@ export default function SendPreview({
         setKycError("Please fill in all personal information fields.");
         return;
       }
+      setKycStep(kycStep + 1);
     } else if (kycStep === 1) {
       if (!kycFormData.photo_id_front) {
         setKycError("Please upload the front of your photo ID.");
         return;
       }
-    }
-
-    if (kycStep < kycSteps.length - 1) {
-      setKycStep(kycStep + 1);
-    } else {
+      
       setIsLoading(true);
       try {
         const { photo_id_front, photo_id_back, ...stringFields } = kycFormData;
@@ -263,52 +260,62 @@ export default function SendPreview({
           }
         }
         
-        let fileUploadConfig;
+        // Upload ID files directly to our database
         try {
-          // Only try to get file upload config if we have a valid transferId
-          if (transferId) {
-            // Get file upload config
-            fileUploadConfig = await kycFileConfig.mutateAsync({
-              type: "sender",
-              transferId: transferId,
-            });
-          } else {
-            throw new Error("Missing transferId");
-          }
-        } catch (error) {
-          console.error("Failed to get file upload config:", error);
-          // Continue with payment processing in both development and production
-          // since file upload is optional in this flow
-          console.log("Skipping file upload, proceeding to payment");
-          processPayment();
-          return;
-        }
-        
-        // Upload ID documents
-        if (fileUploadConfig?.url && fileUploadConfig?.config) {
-          const formData = new FormData();
-          if (sep12Id) {
-            formData.append("id", String(sep12Id));
-          }
-          if (photo_id_front) {
-            formData.append("photo_id_front", photo_id_front);
-          }
-          if (photo_id_back) {
-            formData.append("photo_id_back", photo_id_back);
-          }
-          
-          try {
-            await axios.put(fileUploadConfig.url, formData, fileUploadConfig.config);
-          } catch (error) {
-            console.error("Failed to upload ID documents:", error);
+          // Only upload if we have files to upload
+          if (photo_id_front || photo_id_back) {
+            // Convert files to base64
+            const photoIdFrontBase64 = photo_id_front 
+              ? await fileToBase64(photo_id_front) 
+              : undefined;
+              
+            const photoIdBackBase64 = photo_id_back 
+              ? await fileToBase64(photo_id_back) 
+              : undefined;
             
-            // Only show error in production if upload fails
-            if (!isDev) {
-              setKycError("Could not upload your documents. Please try again later.");
-              setIsLoading(false);
-              return;
+            // Upload files to our database
+            try {
+              // Use a direct API call to avoid errors
+              const kycResult = await fetch('/api/trpc/stellar.kycUploadFiles', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  json: {
+                    type: "sender",
+                    transferId: transferId || `mock_transfer_${Date.now()}`,
+                    photoIdFront: photoIdFrontBase64,
+                    photoIdFrontType: photo_id_front?.type,
+                    photoIdBack: photoIdBackBase64,
+                    photoIdBackType: photo_id_back?.type,
+                    sep12Id: sep12Id
+                  }
+                }),
+              });
+              
+              if (!kycResult.ok) {
+                throw new Error(`Failed to upload KYC files: ${kycResult.statusText}`);
+              }
+            } catch (uploadError) {
+              console.error("Failed to upload ID documents:", uploadError);
+              
+              // Only show error in production if upload fails
+              if (!isDev) {
+                setKycError("Could not upload your documents. Please try again later.");
+                setIsLoading(false);
+                return;
+              }
+              // In dev mode, continue despite errors
             }
           }
+        } catch (error) {
+          setIsLoading(false);
+          console.error("KYC process error:", error);
+          
+          // Show a user-friendly error message
+          setKycError("Verification failed. Please try again later.");
+          toast.error("Error verifying your identity");
         }
         
         // KYC successful, proceed to payment processing
@@ -322,6 +329,16 @@ export default function SendPreview({
         toast.error("Error verifying your identity");
       }
     }
+  };
+  
+  // Helper function to convert File to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+    });
   };
 
   const handleInitiateVerification = async () => {

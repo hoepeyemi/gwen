@@ -19,13 +19,10 @@ import {
   Receipt,
   CreditCard,
   Banknote,
-  User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
-import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface Transaction {
   id: string;
@@ -62,66 +59,57 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
-  const { user: civicUserContext } = useUser();
-  const civicUser = civicUserContext?.user;
+  const { user, logout, refreshUserData } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{
-    name: string | null;
-    email: string | null;
-    picture: string | null;
-  }>({
-    name: null,
-    email: null,
-    picture: null,
-  });
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   
-  // Initialize user data from localStorage on mount
+  // Initialize wallet address from localStorage only on client side
   useEffect(() => {
-    try {
-      // First check localStorage for user data
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        
-        // Update profile data from localStorage
-        setUserProfile({
-          name: parsedUser.name || null,
-          email: parsedUser.email || null,
-          picture: parsedUser.picture || null,
-        });
-        
-        // Update wallet address from localStorage if it exists
-        if (parsedUser.walletAddress) {
-          setWalletAddress(parsedUser.walletAddress);
+      try {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const user = JSON.parse(userData);
+          if (user.walletAddress) {
+            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
+          setWalletAddress(user.walletAddress);
         }
+        }
+      } catch (error) {
+        console.error("Error initializing wallet address from localStorage:", error);
       }
+  }, []);
+  
+  // Generate wallet address if needed (only on client, after first render)
+  useEffect(() => {
+    const ensureWalletAddress = () => {
+      if (walletAddress) return true; // Already have a wallet address
       
-      // Then check civic user if available
-      if (civicUser) {
-        setUserProfile(prev => ({
-          name: civicUser.name || prev.name,
-          email: civicUser.email || prev.email,
-          picture: civicUser.picture || prev.picture,
-        }));
+      try {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const localUser = JSON.parse(userData);
+          if (!localUser.walletAddress) {
+            // Generate a unique wallet address for the user
+            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+            localUser.walletAddress = newAddress;
+            localStorage.setItem("auth_user", JSON.stringify(localUser));
+            console.log("WALLET ADDRESS GENERATION:", newAddress);
+            setWalletAddress(newAddress);
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error("Error ensuring wallet address:", error);
+        return false;
       }
-      
-      // Set wallet address from context if available
-      if (solanaWalletAddress) {
-        setWalletAddress(solanaWalletAddress);
-      }
-      
-      setIsLoadingAuth(false);
-    } catch (error) {
-      console.error("Error initializing user data:", error);
-      setIsLoadingAuth(false);
-    }
-  }, [civicUser, solanaWalletAddress]);
+    };
+
+    ensureWalletAddress();
+  }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -153,7 +141,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-    } else {
+              } else {
       router.push("/receive");
     }
   };
@@ -162,7 +150,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      toast.error("Please connect your wallet first");
+      toast.error("No wallet address found");
     }
   };
 
@@ -170,7 +158,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      toast.error("Please connect your wallet first");
+      toast.error("No wallet address found");
     }
   };
 
@@ -181,8 +169,8 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-    } else {
-      toast.error("Please connect your wallet first");
+            } else {
+      toast.error("No wallet address found");
     }
   };
 
@@ -190,7 +178,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}`);
     } else {
-      toast.error("Please connect your wallet first");
+      router.push("/wallet");
     }
   };
 
@@ -199,67 +187,8 @@ function DashboardContent() {
     router.push("/auth/signin");
   };
 
-  // Render transactions in a reusable way
-  const renderTransactions = (transactionsList: Transaction[]) => {
-    return transactionsList.map((transaction) => (
-      <div
-        key={transaction.id}
-        className="flex items-center justify-between"
-      >
-        <div className="flex items-center">
-          <div
-            className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center ${
-              transaction.type === "send"
-                ? "bg-red-100"
-                : "bg-green-100"
-            }`}
-          >
-            {transaction.type === "send" ? (
-              <ArrowUp
-                className={`h-4 w-4 sm:h-5 sm:w-5 ${
-                  transaction.type === "send"
-                    ? "text-red-500"
-                    : "text-green-500"
-                }`}
-              />
-            ) : (
-              <ArrowDown
-                className="h-4 w-4 sm:h-5 sm:w-5 text-green-500"
-              />
-            )}
-          </div>
-          <div className="ml-2 sm:ml-3">
-            <p className="text-xs sm:text-sm font-medium truncate max-w-[150px] sm:max-w-[250px]">
-              {transaction.type === "send"
-                ? `Sent to ${transaction.recipient}`
-                : `Received from ${transaction.recipient}`}
-            </p>
-            <p className="text-xs text-gray-500">
-              {transaction.date}
-            </p>
-          </div>
-        </div>
-        <div
-          className={`text-xs sm:text-sm font-semibold ${
-            transaction.type === "send"
-              ? "text-red-500"
-              : "text-green-500"
-          }`}
-        >
-          {transaction.type === "send" ? "-" : "+"}
-          {formatCurrency(transaction.amount)}
-        </div>
-      </div>
-    ));
-  };
-
-  // If still loading the auth state, show loading spinner
-  if (isLoadingAuth) {
-    return <DashboardLoading />;
-  }
-  
-  // If no user profile is found in localStorage, show sign in message
-  if (!userProfile.name && !userProfile.email) {
+  // If no user is signed in, show a message
+  if (!user) {
     return (
       <div className="container mt-10 max-w-md mx-auto text-center">
         <Card>
@@ -276,56 +205,19 @@ function DashboardContent() {
   }
 
   return (
-    <div className="container px-2 sm:px-4 mx-auto max-w-4xl">
-      <div className="mb-4 sm:mb-6 mt-2 flex items-center justify-between">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="container px-4 mx-auto">
+      <div className="mb-6 mt-2 flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center">
           <UserButton />
         </div>
-      </div>
+        </div>
 
-      {/* User Profile Card */}
-      <Card className="mb-4">
-        <CardContent className="p-3 sm:p-4 flex flex-wrap sm:flex-nowrap items-center">
-          <Avatar className="h-12 w-12 sm:h-16 sm:w-16 mr-3 sm:mr-4">
-            <AvatarImage src={userProfile.picture || undefined} />
-            <AvatarFallback>
-              <User className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="w-full sm:w-auto mt-2 sm:mt-0">
-            <h2 className="text-lg sm:text-xl font-semibold">
-              {userProfile.name || "Welcome!"}
-            </h2>
-            {userProfile.email && (
-              <p className="text-gray-500 text-xs sm:text-sm">{userProfile.email}</p>
-            )}
-            {walletAddress ? (
-              <p className="text-xs font-mono mt-1 text-gray-500 break-all">
-                {walletAddress.length > 20
-                  ? `${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}`
-                  : walletAddress}
-              </p>
-            ) : (
-              <p className="text-xs mt-1 text-gray-500">
-                <Button 
-                  variant="link" 
-                  className="h-auto p-0 text-xs"
-                  onClick={() => router.push("/wallet")}
-                >
-                  Connect wallet
-                </Button>
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-3 sm:gap-4">
+      <div className="grid gap-4">
         {/* Balance Card */}
         <Card>
-          <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-sm sm:text-base font-semibold">Balance</CardTitle>
+          <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold">Balance</CardTitle>
             <Button variant="ghost" size="icon" onClick={toggleBalanceVisibility}>
                 {showBalance ? (
                 <EyeOff className="h-4 w-4" />
@@ -334,11 +226,11 @@ function DashboardContent() {
               )}
             </Button>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">
+          <CardContent className="p-4 pt-0">
+            <div className="text-3xl font-bold">
               {showBalance ? formatCurrency(balance) : "********"}
             </div>
-            <div className="mt-3 sm:mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="mt-4 grid grid-cols-4 gap-3">
               <Button
                 onClick={handleReceive}
                 className="flex flex-col items-center h-auto py-2 text-xs"
@@ -376,27 +268,27 @@ function DashboardContent() {
         </Card>
 
         {/* Investments and Banking */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {/* Investment Card */}
           <Card>
-            <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-sm sm:text-base font-semibold">Invest</CardTitle>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base font-semibold">Invest</CardTitle>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
+            <CardContent className="p-4 pt-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-green-500 mr-2" />
+                  <Leaf className="h-6 w-6 text-green-500 mr-2" />
                   <div>
-                    <p className="text-sm sm:text-base font-medium">Earn 8%</p>
+                    <p className="font-medium">Earn 8%</p>
                     <p className="text-xs text-gray-500">Sustainable funds</p>
                   </div>
             </div>
                 <Button
                   size="sm"
                   onClick={handleInvestments}
-                  className="h-8 text-xs sm:text-sm"
+                  className="h-8"
                 >
-                  <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Invest
+                  <ArrowUpRight className="h-4 w-4 mr-1" /> Invest
                 </Button>
             </div>
           </CardContent>
@@ -404,15 +296,15 @@ function DashboardContent() {
 
           {/* Banking Card */}
           <Card>
-            <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
-              <CardTitle className="text-sm sm:text-base font-semibold">Banking</CardTitle>
+            <CardHeader className="p-4 pb-2">
+              <CardTitle className="text-base font-semibold">Banking</CardTitle>
             </CardHeader>
-            <CardContent className="p-3 sm:p-4 pt-0">
+            <CardContent className="p-4 pt-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <Landmark className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500 mr-2" />
+                  <Landmark className="h-6 w-6 text-blue-500 mr-2" />
                   <div>
-                    <p className="text-sm sm:text-base font-medium">Connect Bank</p>
+                    <p className="font-medium">Connect Bank</p>
                     <p className="text-xs text-gray-500">Fast transfers</p>
                   </div>
             </div>
@@ -420,7 +312,7 @@ function DashboardContent() {
                   size="sm"
                   variant="outline"
                   onClick={handleConnectBank}
-                  className="h-8 text-xs sm:text-sm"
+                  className="h-8"
                 >
                   Connect
                 </Button>
@@ -431,44 +323,141 @@ function DashboardContent() {
 
         {/* Chart */}
         <Card>
-          <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-sm sm:text-base font-semibold">Activity Overview</CardTitle>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-base font-semibold">Activity Overview</CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="w-full h-[150px] sm:h-[200px] md:h-[250px]">
-              <Chart />
-            </div>
+          <CardContent className="p-4 pt-0">
+            <Chart />
           </CardContent>
         </Card>
 
         {/* Transactions */}
         <Card>
-          <CardHeader className="p-3 sm:p-4 pb-1 sm:pb-2">
-            <CardTitle className="text-sm sm:text-base font-semibold">Recent Transactions</CardTitle>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
+          <CardContent className="p-4 pt-0">
             <Tabs defaultValue="all">
-              <TabsList className="mb-3 sm:mb-4 w-full">
-                <TabsTrigger className="flex-1" value="all">All</TabsTrigger>
-                <TabsTrigger className="flex-1" value="sent">Sent</TabsTrigger>
-                <TabsTrigger className="flex-1" value="received">Received</TabsTrigger>
-              </TabsList>
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="sent">Sent</TabsTrigger>
+                <TabsTrigger value="received">Received</TabsTrigger>
+        </TabsList>
               <TabsContent value="all">
-                <div className="space-y-3 sm:space-y-4">{renderTransactions(transactions)}</div>
-              </TabsContent>
+                <div className="space-y-4">
+                  {transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center">
+                        <div
+                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                            transaction.type === "send"
+                              ? "bg-red-100"
+                              : "bg-green-100"
+                          }`}
+                        >
+                          {transaction.type === "send" ? (
+                            <ArrowUp
+                              className={`h-5 w-5 ${
+                                transaction.type === "send"
+                                  ? "text-red-500"
+                                  : "text-green-500"
+                              }`}
+                            />
+                          ) : (
+                            <ArrowDown
+                              className="h-5 w-5 text-green-500"
+                            />
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium">
+                            {transaction.type === "send"
+                              ? `Sent to ${transaction.recipient}`
+                              : `Received from ${transaction.recipient}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {transaction.date}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className={`text-sm font-semibold ${
+                          transaction.type === "send"
+                            ? "text-red-500"
+                            : "text-green-500"
+                        }`}
+                      >
+                        {transaction.type === "send" ? "-" : "+"}
+                        {formatCurrency(transaction.amount)}
+                      </div>
+                    </div>
+              ))}
+            </div>
+        </TabsContent>
               <TabsContent value="sent">
-                <div className="space-y-3 sm:space-y-4">
-                  {renderTransactions(transactions.filter((t) => t.type === "send"))}
+                <div className="space-y-4">
+                  {transactions
+                    .filter((t) => t.type === "send")
+                    .map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <ArrowUp className="h-5 w-5 text-red-500" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium">
+                              Sent to {transaction.recipient}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {transaction.date}
+                </p>
+              </div>
+                        </div>
+                        <div className="text-sm font-semibold text-red-500">
+                          -{formatCurrency(transaction.amount)}
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </TabsContent>
               <TabsContent value="received">
-                <div className="space-y-3 sm:space-y-4">
-                  {renderTransactions(transactions.filter((t) => t.type === "receive"))}
+                <div className="space-y-4">
+                  {transactions
+                    .filter((t) => t.type === "receive")
+                    .map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <ArrowDown className="h-5 w-5 text-green-500" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium">
+                              Received from {transaction.recipient}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {transaction.date}
+                  </p>
+                </div>
+              </div>
+                        <div className="text-sm font-semibold text-green-500">
+                          +{formatCurrency(transaction.amount)}
+                </div>
+                </div>
+                    ))}
                 </div>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
       </div>
     </div>
   );
