@@ -39,13 +39,13 @@ export function Chart() {
   const maxValue = Math.max(...data[period].map(item => item.value));
   
   return (
-    <div className="space-y-4 w-full">
-      <div className="flex justify-center sm:justify-end space-x-2">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex justify-end space-x-1 sm:space-x-2">
         {(["1w", "1m", "3m", "1y"] as const).map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`px-2 py-1 rounded text-xs ${
+            className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs ${
               period === p
                 ? "bg-blue-100 text-blue-700 font-medium"
                 : "text-gray-500 hover:bg-gray-100"
@@ -56,18 +56,18 @@ export function Chart() {
         ))}
       </div>
       
-      <div className="h-40 sm:h-56 w-full">
-        <div className="flex h-full items-end justify-between px-2">
+      <div className="h-32 sm:h-40 w-full">
+        <div className="flex h-full items-end justify-between">
           {data[period].map((item, index) => (
             <div key={index} className="flex h-full flex-col items-center justify-end">
               <div 
-                className="w-5 sm:w-8 bg-blue-500 rounded-t-sm transition-all duration-300"
+                className="w-4 sm:w-8 bg-blue-500 rounded-t-sm transition-all duration-300"
                 style={{ 
                   height: `${(item.value / maxValue) * 80}%`,
                   opacity: 0.6 + (item.value / maxValue) * 0.4,
                 }}
               />
-              <div className="mt-2 text-[10px] sm:text-xs text-gray-500">{item.day}</div>
+              <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-gray-500">{item.day}</div>
             </div>
           ))}
         </div>

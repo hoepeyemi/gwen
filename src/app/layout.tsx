@@ -1,7 +1,7 @@
 import "~/styles/globals.css";
 
 import { GeistSans } from "geist/font/sans";
-import { type Metadata, type Viewport } from "next";
+import { type Metadata } from "next";
 import { Nunito } from 'next/font/google';
 
 import { TRPCReactProvider } from "~/trpc/react";
@@ -19,13 +19,6 @@ export const metadata: Metadata = {
   title: "Gwen",
   description: "Send money to your friends and family",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  minimumScale: 1,
-  maximumScale: 5,
 };
 
 export default function RootLayout({
