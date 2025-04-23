@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
-import { UserProfile } from "./components/user-profile";
+import { UserButton } from "@civic/auth-web3/react";
 
 interface Transaction {
   id: string;
@@ -68,49 +68,48 @@ function DashboardContent() {
   
   // Initialize wallet address from localStorage only on client side
   useEffect(() => {
-    const initializeWalletAddress = () => {
       try {
         const userData = localStorage.getItem("auth_user");
         if (userData) {
-          const parsedUser = JSON.parse(userData);
-          if (parsedUser.walletAddress) {
-            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
-            setWalletAddress(parsedUser.walletAddress);
-          } else {
-            // Generate a wallet address if it doesn't exist
-            generateWalletAddress(parsedUser);
-          }
+          const user = JSON.parse(userData);
+          if (user.walletAddress) {
+            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
+          setWalletAddress(user.walletAddress);
+        }
         }
       } catch (error) {
         console.error("Error initializing wallet address from localStorage:", error);
       }
-    };
-    
-    initializeWalletAddress();
   }, []);
   
-  // Function to generate and save a new wallet address
-  const generateWalletAddress = (userData: any) => {
-    try {
-      // Generate a unique wallet address for the user
-      const newAddress = userData.id ? 
-        `G${Math.random().toString(36).substring(2, 10)}${userData.id}${Math.random().toString(36).substring(2, 6)}` :
-        `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`;
+  // Generate wallet address if needed (only on client, after first render)
+  useEffect(() => {
+    const ensureWalletAddress = () => {
+      if (walletAddress) return true; // Already have a wallet address
       
-      // Update local storage
-      userData.walletAddress = newAddress;
-      localStorage.setItem("auth_user", JSON.stringify(userData));
-      
-      console.log("WALLET ADDRESS GENERATION:", newAddress);
-      setWalletAddress(newAddress);
-      
-      // If we have a user object with ID, we could also update the backend here
-      return true;
-    } catch (error) {
-      console.error("Error generating wallet address:", error);
-      return false;
-    }
-  };
+      try {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const localUser = JSON.parse(userData);
+          if (!localUser.walletAddress) {
+            // Generate a unique wallet address for the user
+            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+            localUser.walletAddress = newAddress;
+            localStorage.setItem("auth_user", JSON.stringify(localUser));
+            console.log("WALLET ADDRESS GENERATION:", newAddress);
+            setWalletAddress(newAddress);
+            return true;
+          }
+        }
+        return false;
+      } catch (error) {
+        console.error("Error ensuring wallet address:", error);
+        return false;
+      }
+    };
+
+    ensureWalletAddress();
+  }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -209,8 +208,10 @@ function DashboardContent() {
     <div className="container px-4 mx-auto">
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <UserProfile />
-      </div>
+        <div className="flex items-center">
+          <UserButton />
+        </div>
+        </div>
 
       <div className="grid gap-4">
         {/* Balance Card */}
