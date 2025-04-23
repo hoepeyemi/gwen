@@ -141,7 +141,9 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
             const user = JSON.parse(userData);
             if (!user.walletAddress) {
               // Generate a unique wallet address for the user
-              const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+              const newAddress = user.id ? 
+                `G${Math.random().toString(36).substring(2, 10)}${user.id}${Math.random().toString(36).substring(2, 6)}` :
+                `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`;
               user.walletAddress = newAddress;
               localStorage.setItem("auth_user", JSON.stringify(user));
               console.log("Generated new wallet address on PIN validation:", newAddress);
@@ -206,7 +208,9 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           const user = JSON.parse(userData);
           if (!user.walletAddress) {
             // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+            const newAddress = user.id ? 
+              `G${Math.random().toString(36).substring(2, 10)}${user.id}${Math.random().toString(36).substring(2, 6)}` :
+              `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`;
             user.walletAddress = newAddress;
             localStorage.setItem("auth_user", JSON.stringify(user));
             console.log("Generated new wallet address via biometric auth:", newAddress);

@@ -22,8 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
-import { UserButton } from "@civic/auth-web3/react";
-import { UserProfile } from "~/components/ui/user-profile";
+import { UserProfile } from "./components/user-profile";
 
 interface Transaction {
   id: string;
@@ -60,76 +59,58 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, solanaWalletAddress } = useAuth();
+  const { user, logout, refreshUserData } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   
-  // Initialize wallet address and profile picture from localStorage and Auth provider
+  // Initialize wallet address from localStorage only on client side
   useEffect(() => {
-    // First try to get the wallet address from the Auth context (from Civic)
-    if (solanaWalletAddress && !walletAddress) {
-      console.log("Using wallet address from Civic:", solanaWalletAddress);
-      setWalletAddress(solanaWalletAddress);
-    }
-    
-    // If not available, fall back to localStorage
-    if (!walletAddress) {
+    const initializeWalletAddress = () => {
       try {
         const userData = localStorage.getItem("auth_user");
         if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            console.log("Using wallet address from storage:", user.walletAddress);
-            setWalletAddress(user.walletAddress);
-          }
-          if (user.picture) {
-            setProfilePicture(user.picture);
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.walletAddress) {
+            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
+            setWalletAddress(parsedUser.walletAddress);
+          } else {
+            // Generate a wallet address if it doesn't exist
+            generateWalletAddress(parsedUser);
           }
         }
       } catch (error) {
-        console.error("Error initializing user data from localStorage:", error);
-      }
-    }
-  }, [solanaWalletAddress, walletAddress]);
-  
-  // Generate wallet address if needed
-  useEffect(() => {
-    const ensureWalletAddress = async () => {
-      if (walletAddress) return; // Already have a wallet address
-      
-      try {
-        // Generate a unique wallet address for the user
-        const newAddress = `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-        console.log("Generated new wallet address:", newAddress);
-        
-        // Update state
-        setWalletAddress(newAddress);
-        
-        // Save to localStorage
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const localUser = JSON.parse(userData);
-          localUser.walletAddress = newAddress;
-          localStorage.setItem("auth_user", JSON.stringify(localUser));
-          
-          // Update toast notification
-          toast.success("Wallet address generated successfully!");
-        }
-      } catch (error) {
-        console.error("Error ensuring wallet address:", error);
-        toast.error("Failed to generate wallet address");
+        console.error("Error initializing wallet address from localStorage:", error);
       }
     };
-
-    // Only run if we don't have a wallet address yet
-    if (!walletAddress) {
-      ensureWalletAddress();
+    
+    initializeWalletAddress();
+  }, []);
+  
+  // Function to generate and save a new wallet address
+  const generateWalletAddress = (userData: any) => {
+    try {
+      // Generate a unique wallet address for the user
+      const newAddress = userData.id ? 
+        `G${Math.random().toString(36).substring(2, 10)}${userData.id}${Math.random().toString(36).substring(2, 6)}` :
+        `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 10)}`;
+      
+      // Update local storage
+      userData.walletAddress = newAddress;
+      localStorage.setItem("auth_user", JSON.stringify(userData));
+      
+      console.log("WALLET ADDRESS GENERATION:", newAddress);
+      setWalletAddress(newAddress);
+      
+      // If we have a user object with ID, we could also update the backend here
+      return true;
+    } catch (error) {
+      console.error("Error generating wallet address:", error);
+      return false;
     }
-  }, [walletAddress]);
+  };
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -161,7 +142,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-    } else {
+              } else {
       router.push("/receive");
     }
   };
@@ -170,7 +151,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      toast.error("No wallet address found. Please refresh the page.");
+      toast.error("No wallet address found");
     }
   };
 
@@ -178,7 +159,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      toast.error("No wallet address found. Please refresh the page.");
+      toast.error("No wallet address found");
     }
   };
 
@@ -228,11 +209,7 @@ function DashboardContent() {
     <div className="container px-4 mx-auto">
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <UserProfile 
-          name={user?.name}
-          walletAddress={walletAddress}
-          profilePicture={profilePicture}
-        />
+        <UserProfile />
       </div>
 
       <div className="grid gap-4">
