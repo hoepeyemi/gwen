@@ -19,21 +19,11 @@ import {
   Receipt,
   CreditCard,
   Banknote,
-  User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import Image from "next/image";
-
-// Helper function to shorten wallet address
-const shortenAddress = (address: string) => {
-  if (!address) return "";
-  if (address.startsWith("stellar:")) {
-    address = address.replace("stellar:", "");
-  }
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-};
+import { UserProfile } from "~/components/ui/user-profile";
 
 interface Transaction {
   id: string;
@@ -70,72 +60,75 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData } = useAuth();
+  const { user, logout, solanaWalletAddress } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
   
-  // Initialize user data from localStorage only on client side
+  // Initialize wallet address and profile picture from localStorage and Auth provider
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        
-        // Set wallet address
-        if (parsedUser.walletAddress) {
-          console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
-          setWalletAddress(parsedUser.walletAddress);
-        }
-        
-        // Set profile picture
-        if (parsedUser.picture) {
-          setProfilePicture(parsedUser.picture);
-        }
-        
-        // Set user name
-        if (parsedUser.name) {
-          setUserName(parsedUser.name);
-        } else if (parsedUser.firstName) {
-          setUserName(parsedUser.firstName + (parsedUser.lastName ? ` ${parsedUser.lastName}` : ''));
-        }
-      }
-    } catch (error) {
-      console.error("Error initializing user data from localStorage:", error);
+    // First try to get the wallet address from the Auth context (from Civic)
+    if (solanaWalletAddress && !walletAddress) {
+      console.log("Using wallet address from Civic:", solanaWalletAddress);
+      setWalletAddress(solanaWalletAddress);
     }
-  }, []);
-  
-  // Generate wallet address if needed (only on client, after first render)
-  useEffect(() => {
-    const ensureWalletAddress = () => {
-      if (walletAddress) return true; // Already have a wallet address
-      
+    
+    // If not available, fall back to localStorage
+    if (!walletAddress) {
       try {
         const userData = localStorage.getItem("auth_user");
         if (userData) {
-          const localUser = JSON.parse(userData);
-          if (!localUser.walletAddress) {
-            // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-            localUser.walletAddress = newAddress;
-            localStorage.setItem("auth_user", JSON.stringify(localUser));
-            console.log("WALLET ADDRESS GENERATION:", newAddress);
-            setWalletAddress(newAddress);
-            return true;
+          const user = JSON.parse(userData);
+          if (user.walletAddress) {
+            console.log("Using wallet address from storage:", user.walletAddress);
+            setWalletAddress(user.walletAddress);
+          }
+          if (user.picture) {
+            setProfilePicture(user.picture);
           }
         }
-        return false;
+      } catch (error) {
+        console.error("Error initializing user data from localStorage:", error);
+      }
+    }
+  }, [solanaWalletAddress, walletAddress]);
+  
+  // Generate wallet address if needed
+  useEffect(() => {
+    const ensureWalletAddress = async () => {
+      if (walletAddress) return; // Already have a wallet address
+      
+      try {
+        // Generate a unique wallet address for the user
+        const newAddress = `G${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+        console.log("Generated new wallet address:", newAddress);
+        
+        // Update state
+        setWalletAddress(newAddress);
+        
+        // Save to localStorage
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const localUser = JSON.parse(userData);
+          localUser.walletAddress = newAddress;
+          localStorage.setItem("auth_user", JSON.stringify(localUser));
+          
+          // Update toast notification
+          toast.success("Wallet address generated successfully!");
+        }
       } catch (error) {
         console.error("Error ensuring wallet address:", error);
-        return false;
+        toast.error("Failed to generate wallet address");
       }
     };
 
-    ensureWalletAddress();
+    // Only run if we don't have a wallet address yet
+    if (!walletAddress) {
+      ensureWalletAddress();
+    }
   }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
@@ -168,7 +161,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-              } else {
+    } else {
       router.push("/receive");
     }
   };
@@ -177,7 +170,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      toast.error("No wallet address found");
+      toast.error("No wallet address found. Please refresh the page.");
     }
   };
 
@@ -185,7 +178,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      toast.error("No wallet address found");
+      toast.error("No wallet address found. Please refresh the page.");
     }
   };
 
@@ -235,35 +228,12 @@ function DashboardContent() {
     <div className="container px-4 mx-auto">
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center">
-          <UserButton />
-        </div>
+        <UserProfile 
+          name={user?.name}
+          walletAddress={walletAddress}
+          profilePicture={profilePicture}
+        />
       </div>
-
-      {/* User Profile Card */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex items-center">
-          <div className="mr-4 h-12 w-12 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
-            {profilePicture ? (
-              <Image 
-                src={profilePicture} 
-                alt="Profile picture" 
-                width={48} 
-                height={48} 
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <User className="h-6 w-6 text-blue-500" />
-            )}
-          </div>
-          <div>
-            <h2 className="font-semibold text-lg">{userName || "User"}</h2>
-            <p className="text-sm text-gray-500">
-              {walletAddress ? shortenAddress(walletAddress) : "No wallet connected"}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4">
         {/* Balance Card */}

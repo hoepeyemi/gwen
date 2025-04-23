@@ -43,8 +43,18 @@ export function shortStellarAddress(
   charsToShow = 4,
 ): string {
   if (!longAddress) return "";
+  
+  // Handle addresses with a prefix like "stellar:" or "solana:"
+  if (longAddress.includes(":")) {
+    const parts = longAddress.split(":");
+    longAddress = parts[parts.length - 1];
+  }
+  
+  // Make TypeScript happy by ensuring longAddress is not undefined
+  const address = longAddress || "";
+  
   return (
-    longAddress.slice(0, charsToShow) + "..." + longAddress.slice(-charsToShow)
+    address.slice(0, charsToShow) + "..." + address.slice(-charsToShow)
   );
 }
 
