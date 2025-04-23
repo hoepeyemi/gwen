@@ -66,50 +66,33 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   
-  // Initialize wallet address from localStorage only on client side
+  // Single useEffect to handle wallet address initialization
   useEffect(() => {
+    // Only run this once when the component mounts
+    const initializeWallet = () => {
       try {
         const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
-          setWalletAddress(user.walletAddress);
-        }
+        if (!userData) return;
+        
+        const userObj = JSON.parse(userData);
+        
+        if (userObj.walletAddress) {
+          // Wallet address exists
+          setWalletAddress(userObj.walletAddress);
+        } else {
+          // Generate a new wallet address if needed
+          const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+          userObj.walletAddress = newAddress;
+          localStorage.setItem("auth_user", JSON.stringify(userObj));
+          setWalletAddress(newAddress);
         }
       } catch (error) {
-        console.error("Error initializing wallet address from localStorage:", error);
-      }
-  }, []);
-  
-  // Generate wallet address if needed (only on client, after first render)
-  useEffect(() => {
-    const ensureWalletAddress = () => {
-      if (walletAddress) return true; // Already have a wallet address
-      
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const localUser = JSON.parse(userData);
-          if (!localUser.walletAddress) {
-            // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-            localUser.walletAddress = newAddress;
-            localStorage.setItem("auth_user", JSON.stringify(localUser));
-            console.log("WALLET ADDRESS GENERATION:", newAddress);
-            setWalletAddress(newAddress);
-            return true;
-          }
-        }
-        return false;
-      } catch (error) {
-        console.error("Error ensuring wallet address:", error);
-        return false;
+        console.error("Error initializing wallet:", error);
       }
     };
-
-    ensureWalletAddress();
-  }, [walletAddress]);
+    
+    initializeWallet();
+  }, []); // Empty dependency array - only run once
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -141,7 +124,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-              } else {
+    } else {
       router.push("/receive");
     }
   };
@@ -169,7 +152,7 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-            } else {
+    } else {
       toast.error("No wallet address found");
     }
   };
