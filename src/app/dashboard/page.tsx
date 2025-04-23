@@ -19,10 +19,21 @@ import {
   Receipt,
   CreditCard,
   Banknote,
+  User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
+import Image from "next/image";
+
+// Helper function to shorten wallet address
+const shortenAddress = (address: string) => {
+  if (!address) return "";
+  if (address.startsWith("stellar:")) {
+    address = address.replace("stellar:", "");
+  }
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
 
 interface Transaction {
   id: string;
@@ -65,34 +76,67 @@ function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   
-  // Single useEffect to handle wallet address initialization
+  // Initialize user data from localStorage only on client side
   useEffect(() => {
-    // Only run this once when the component mounts
-    const initializeWallet = () => {
+    try {
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        
+        // Set wallet address
+        if (parsedUser.walletAddress) {
+          console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", parsedUser.walletAddress);
+          setWalletAddress(parsedUser.walletAddress);
+        }
+        
+        // Set profile picture
+        if (parsedUser.picture) {
+          setProfilePicture(parsedUser.picture);
+        }
+        
+        // Set user name
+        if (parsedUser.name) {
+          setUserName(parsedUser.name);
+        } else if (parsedUser.firstName) {
+          setUserName(parsedUser.firstName + (parsedUser.lastName ? ` ${parsedUser.lastName}` : ''));
+        }
+      }
+    } catch (error) {
+      console.error("Error initializing user data from localStorage:", error);
+    }
+  }, []);
+  
+  // Generate wallet address if needed (only on client, after first render)
+  useEffect(() => {
+    const ensureWalletAddress = () => {
+      if (walletAddress) return true; // Already have a wallet address
+      
       try {
         const userData = localStorage.getItem("auth_user");
-        if (!userData) return;
-        
-        const userObj = JSON.parse(userData);
-        
-        if (userObj.walletAddress) {
-          // Wallet address exists
-          setWalletAddress(userObj.walletAddress);
-        } else {
-          // Generate a new wallet address if needed
-          const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-          userObj.walletAddress = newAddress;
-          localStorage.setItem("auth_user", JSON.stringify(userObj));
-          setWalletAddress(newAddress);
+        if (userData) {
+          const localUser = JSON.parse(userData);
+          if (!localUser.walletAddress) {
+            // Generate a unique wallet address for the user
+            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+            localUser.walletAddress = newAddress;
+            localStorage.setItem("auth_user", JSON.stringify(localUser));
+            console.log("WALLET ADDRESS GENERATION:", newAddress);
+            setWalletAddress(newAddress);
+            return true;
+          }
         }
+        return false;
       } catch (error) {
-        console.error("Error initializing wallet:", error);
+        console.error("Error ensuring wallet address:", error);
+        return false;
       }
     };
-    
-    initializeWallet();
-  }, []); // Empty dependency array - only run once
+
+    ensureWalletAddress();
+  }, [walletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -124,7 +168,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-    } else {
+              } else {
       router.push("/receive");
     }
   };
@@ -152,7 +196,7 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-    } else {
+            } else {
       toast.error("No wallet address found");
     }
   };
@@ -194,7 +238,32 @@ function DashboardContent() {
         <div className="flex items-center">
           <UserButton />
         </div>
-        </div>
+      </div>
+
+      {/* User Profile Card */}
+      <Card className="mb-4">
+        <CardContent className="p-4 flex items-center">
+          <div className="mr-4 h-12 w-12 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+            {profilePicture ? (
+              <Image 
+                src={profilePicture} 
+                alt="Profile picture" 
+                width={48} 
+                height={48} 
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <User className="h-6 w-6 text-blue-500" />
+            )}
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">{userName || "User"}</h2>
+            <p className="text-sm text-gray-500">
+              {walletAddress ? shortenAddress(walletAddress) : "No wallet connected"}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4">
         {/* Balance Card */}

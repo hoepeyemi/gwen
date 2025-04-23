@@ -232,35 +232,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Handle existing wallet detection
     useEffect(() => {
-      // Skip if still loading or no user
-      if (civicLoading || !userContext || !userContext.user) {
-        return;
-      }
-
-      try {
-        // Cast userContext to any to handle the solana property which might not be in the type
-        const context = userContext as any;
-        
-        // Check if user has a wallet using our helper function
-        if (userHasWallet(context)) {
-          // User already has a wallet, extract and store the address
-          console.log("Existing wallet found:", context.solana.address);
-          setSolanaWalletAddress(context.solana.address);
-            
-          // Update user data with wallet address if we have a user
-          if (user) {
-            const updatedUser = { 
-              ...user, 
-              walletAddress: context.solana.address 
-            };
-            
-            setUser(updatedUser);
-            localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-          }
+        // Skip if still loading or no user
+        if (civicLoading || !userContext || !userContext.user) {
+          return;
         }
-      } catch (error) {
-        console.error("Error managing Solana wallet:", error);
-      }
+
+        try {
+          // Cast userContext to any to handle the solana property which might not be in the type
+          const context = userContext as any;
+          
+          // Check if user has a wallet using our helper function
+        if (userHasWallet(context)) {
+            // User already has a wallet, extract and store the address
+            console.log("Existing wallet found:", context.solana.address);
+            setSolanaWalletAddress(context.solana.address);
+              
+            // Update user data with wallet address if we have a user
+            if (user) {
+              const updatedUser = { 
+                ...user, 
+                walletAddress: context.solana.address 
+              };
+              
+              setUser(updatedUser);
+              localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+            }
+          }
+        } catch (error) {
+          console.error("Error managing Solana wallet:", error);
+        }
     }, [userContext?.user, civicLoading, user]);
 
     return null;
