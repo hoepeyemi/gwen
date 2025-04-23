@@ -6,14 +6,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "~/components/ui/button";
 import { ExternalLink, LogIn } from "lucide-react";
 import { UserButton } from "@civic/auth-web3/react";
-import { useAuth } from "~/providers/auth-provider";
-import { useUser } from "~/providers/auth-provider";
+import { useAuth, useUserContext } from "~/providers/auth-provider";
 
 export default function SignIn() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const { user: civicUserContext } = useUser();
+  const { user: civicUserContext } = useUserContext();
   const redirectInProgress = useRef(false);
 
   // Function to handle redirect to dashboard
