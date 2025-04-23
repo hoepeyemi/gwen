@@ -18,7 +18,7 @@ import { env } from "~/env";
 import { api } from "~/trpc/server";
 
 // Helper type guard to check if user has a Solana wallet
-function userHasWallet(userContext: any): userContext is { 
+function userHasWallet(userContext: any): userContext is any & { 
   solana: { address: string; wallet: any } 
 } {
   return userContext && 
@@ -26,6 +26,13 @@ function userHasWallet(userContext: any): userContext is {
     userContext.solana !== null && 
     typeof userContext.solana === 'object' &&
     'address' in userContext.solana;
+}
+
+// Helper to check if user can create a wallet
+function canCreateWallet(userContext: any): boolean {
+  return userContext && 
+    'createWallet' in userContext && 
+    typeof userContext.createWallet === 'function';
 }
 
 interface User {
@@ -197,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
   };
 
-  // Component to handle Solana wallet management
+  // Component to handle Solana wallet creation and synchronization
   const SolanaWalletManager = () => {
     const { user: userContext, isLoading: civicLoading, error: civicError } = useUserContext();
 
@@ -230,8 +237,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }, [civicError, router]);
 
-    // Handle existing wallet detection
+    // Handle wallet creation and management
     useEffect(() => {
+      const createAndSyncWallet = async () => {
         // Skip if still loading or no user
         if (civicLoading || !userContext || !userContext.user) {
           return;
@@ -242,7 +250,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const context = userContext as any;
           
           // Check if user has a wallet using our helper function
-        if (userHasWallet(context)) {
+          if (!userHasWallet(context)) {
+            console.log("No wallet found. Creating a Solana wallet for user...");
+            
+            // The user doesn't have a wallet yet, so we need to create one
+            if (canCreateWallet(context)) {
+              toast.loading("Setting up your Solana wallet...", { id: "wallet-creation" });
+              
+              // Create the wallet using the function we know exists (thanks to our type guard)
+              await (context as any).createWallet();
+              
+              toast.success("Wallet created successfully!", { id: "wallet-creation" });
+              console.log("Solana wallet created successfully!");
+              
+              // Reload to get updated context with the wallet
+              window.location.reload();
+            } else {
+              console.error("createWallet function not available on user context");
+            }
+          } else {
             // User already has a wallet, extract and store the address
             console.log("Existing wallet found:", context.solana.address);
             setSolanaWalletAddress(context.solana.address);
@@ -260,8 +286,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
         } catch (error) {
           console.error("Error managing Solana wallet:", error);
+          toast.error("Failed to set up your wallet. Please try again.");
         }
-    }, [userContext?.user, civicLoading, user]);
+      };
+
+      createAndSyncWallet();
+    }, [userContext?.user, civicLoading]);
 
     return null;
   };
@@ -288,9 +318,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error("Error reading existing user data:", error);
       }
 
-      // Log Civic user data for debugging
-      console.log("Civic user data:", civicUser);
-
       // Update our user state with Civic user data
       const userData: User = {
         id: parseInt(civicUser.id || '0'),
@@ -302,13 +329,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         hashedPin: existingHashedPin,
       };
 
-      // Store in local storage with additional picture field if available
-      const enhancedUserData = {
-        ...userData,
-        picture: civicUser.picture || null,
-      };
-      
-      localStorage.setItem("auth_user", JSON.stringify(enhancedUserData));
+      // Store in local storage
+      localStorage.setItem("auth_user", JSON.stringify(userData));
       
       // Update state
       setUser(userData);
