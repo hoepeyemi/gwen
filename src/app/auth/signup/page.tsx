@@ -40,15 +40,29 @@ export default function SignUp() {
       try {
         const civicUser = civicUserContext.user;
         console.log("Civic user data:", civicUser);
+        console.log("Full Civic context:", civicUserContext);
         
-        // Check if we have a Solana wallet address
-        const hasSolanaWallet = 
-          civicUser.solana && 
-          typeof civicUser.solana === 'object' && 
-          'address' in (civicUser.solana as Record<string, any>);
+        // Check all possible paths for wallet address
+        let solanaWalletAddress = null;
+        const context = civicUserContext as any;
         
-        if (hasSolanaWallet) {
-          console.log("Civic Solana wallet found:", (civicUser.solana as Record<string, any>).address);
+        // Try different possible paths to the Solana wallet address
+        if (context.solana && typeof context.solana === 'object' && context.solana.address) {
+          solanaWalletAddress = context.solana.address;
+          console.log("Found wallet address at context.solana.address:", solanaWalletAddress);
+        } else if (civicUser && civicUser.solana && typeof civicUser.solana === 'object' && 'address' in (civicUser.solana as Record<string, any>)) {
+          solanaWalletAddress = (civicUser.solana as Record<string, any>).address;
+          console.log("Found wallet address at civicUser.solana.address:", solanaWalletAddress);
+        } else if (context.wallet && context.wallet.publicKey) {
+          solanaWalletAddress = context.wallet.publicKey.toString();
+          console.log("Found wallet address at context.wallet.publicKey:", solanaWalletAddress);
+        } else if (civicUser && (civicUser as any).wallet && (civicUser as any).wallet.publicKey) {
+          solanaWalletAddress = (civicUser as any).wallet.publicKey.toString();
+          console.log("Found wallet address at civicUser.wallet.publicKey:", solanaWalletAddress);
+        }
+        
+        if (solanaWalletAddress) {
+          console.log("Using Solana wallet address:", solanaWalletAddress);
         } else {
           console.log("No Civic Solana wallet found. The user may need to complete authentication.");
           toast.loading("Please complete wallet setup through Civic.", { duration: 5000 });
@@ -67,8 +81,8 @@ export default function SignUp() {
         };
         
         // Only set wallet address if we have one from Civic
-        if (hasSolanaWallet) {
-          mergedUser.walletAddress = (civicUser.solana as Record<string, any>).address;
+        if (solanaWalletAddress) {
+          mergedUser.walletAddress = solanaWalletAddress;
         }
         
         localStorage.setItem("auth_user", JSON.stringify(mergedUser));
