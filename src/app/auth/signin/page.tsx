@@ -89,6 +89,7 @@ export default function SignIn() {
         const civicUser = civicUserContext.user;
         console.log("Civic user data:", civicUser);
         console.log("Full Civic context:", civicUserContext);
+        console.log("User picture URL:", civicUser.picture);
         
         // Check all possible paths for wallet address
         let solanaWalletAddress = null;

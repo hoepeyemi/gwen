@@ -24,6 +24,7 @@ import {
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface Transaction {
   id: string;
@@ -217,9 +218,15 @@ function DashboardContent() {
       {userData && (
         <Card className="mb-4">
           <CardContent className="p-4 flex items-center">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
-              <User className="h-6 w-6 text-primary" />
-            </div>
+            <Avatar className="h-12 w-12 mr-4">
+              <AvatarImage 
+                src={userData.picture} 
+                alt={userData.name || "User"} 
+              />
+              <AvatarFallback className="text-lg">
+                {userData.name ? userData.name.substring(0, 2).toUpperCase() : "U"}
+              </AvatarFallback>
+            </Avatar>
             <div>
               <h2 className="text-xl font-semibold">
                 {userData.name || "Welcome!"}

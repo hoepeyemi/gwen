@@ -44,6 +44,7 @@ interface User {
   walletAddress?: string | null;
   name?: string | null;
   hashedPin?: string | null;
+  picture?: string | null;
 }
 
 interface CivicUserContextState {
@@ -261,6 +262,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           
           console.log("💫 Full Civic User Context:", context);
           
+          // Log the picture URL if available 
+          if (context.user && context.user.picture) {
+            console.log("💫 User Picture URL:", context.user.picture);
+          } else if (context.picture) {
+            console.log("💫 User Picture URL:", context.picture);
+          }
+          
           // Careful check of context structure to find the Solana wallet address
           if (context.user) {
             console.log("💫 Civic User:", context.user);
@@ -385,7 +393,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         name: civicUser.name || null,
         walletAddress: existingWalletAddress || null,
         hashedPin: existingHashedPin,
+        picture: civicUser.picture || null,
       };
+
+      // Log for debugging
+      console.log("💫 Updating user with Civic data:", {
+        name: civicUser.name,
+        email: civicUser.email,
+        picture: civicUser.picture
+      });
 
       // Store in local storage
       localStorage.setItem("auth_user", JSON.stringify(userData));
