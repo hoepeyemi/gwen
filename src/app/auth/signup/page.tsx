@@ -8,6 +8,7 @@ import { ExternalLink, UserPlus } from "lucide-react";
 import { UserButton } from "@civic/auth-web3/react";
 import { useAuth } from "~/providers/auth-provider";
 import { useUser } from "~/providers/auth-provider";
+import { toast } from "react-hot-toast";
 
 export default function SignUp() {
   const router = useRouter();
@@ -38,6 +39,21 @@ export default function SignUp() {
       // Save civic user data to localStorage first
       try {
         const civicUser = civicUserContext.user;
+        console.log("Civic user data:", civicUser);
+        
+        // Check if we have a Solana wallet address
+        const hasSolanaWallet = 
+          civicUser.solana && 
+          typeof civicUser.solana === 'object' && 
+          'address' in (civicUser.solana as Record<string, any>);
+        
+        if (hasSolanaWallet) {
+          console.log("Civic Solana wallet found:", (civicUser.solana as Record<string, any>).address);
+        } else {
+          console.log("No Civic Solana wallet found. The user may need to complete authentication.");
+          toast.loading("Please complete wallet setup through Civic.", { duration: 5000 });
+        }
+        
         const userData = localStorage.getItem("auth_user") || "{}";
         const parsedUser = JSON.parse(userData);
         
@@ -50,7 +66,13 @@ export default function SignUp() {
           picture: civicUser.picture || parsedUser.picture,
         };
         
+        // Only set wallet address if we have one from Civic
+        if (hasSolanaWallet) {
+          mergedUser.walletAddress = (civicUser.solana as Record<string, any>).address;
+        }
+        
         localStorage.setItem("auth_user", JSON.stringify(mergedUser));
+        console.log("Updated auth_user in localStorage:", mergedUser);
       } catch (error) {
         console.error("Error saving civic user data:", error);
       }

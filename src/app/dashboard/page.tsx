@@ -96,24 +96,20 @@ function DashboardContent() {
     setIsLoading(false);
   }, [user]);
   
-  // Generate wallet address if needed
+  // Remove the wallet address generation effect and replace with one that checks
+  // for Civic authentication status
   useEffect(() => {
-    if (!walletAddress && userData) {
-      console.log("No wallet address found, generating one");
-      const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-      
-      try {
-        // Update userData with new wallet address
-        const updatedUserData = { ...userData, walletAddress: newAddress };
-        localStorage.setItem("auth_user", JSON.stringify(updatedUserData));
-        setUserData(updatedUserData);
-        setWalletAddress(newAddress);
-        console.log("Generated wallet address:", newAddress);
-      } catch (error) {
-        console.error("Error saving generated wallet address:", error);
+    // If we don't have a wallet address yet but have authenticated user data
+    if (!walletAddress && userData && !userData.walletAddress) {
+      console.log("No wallet address found in user data");
+      // Instead of generating a wallet, we'll redirect to auth if needed
+      if (!user) {
+        console.log("Not authenticated with Civic yet. Wallet address will be provided by Civic auth.");
+        // We could optionally redirect to auth here if we want to force authentication
+        // router.push("/auth/signin");
       }
     }
-  }, [walletAddress, userData]);
+  }, [walletAddress, userData, user, router]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -231,12 +227,24 @@ function DashboardContent() {
               {userData.email && (
                 <p className="text-gray-500 text-sm">{userData.email}</p>
               )}
-              {walletAddress && (
+              {walletAddress ? (
                 <p className="text-xs font-mono mt-1 text-gray-500">
                   {walletAddress.length > 20
                     ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
                     : walletAddress}
                 </p>
+              ) : (
+                <div className="mt-2">
+                  <p className="text-xs text-amber-600 mb-1">No Civic wallet address found</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs h-7 px-2"
+                    onClick={() => router.push("/auth/signin")}
+                  >
+                    Connect Civic Wallet
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
