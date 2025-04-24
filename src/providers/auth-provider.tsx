@@ -219,35 +219,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const SolanaWalletManager = () => {
     const { user: userContext, isLoading: civicLoading, error: civicError } = useUser();
 
-    // Handle Civic errors, especially session mismatch errors
-    useEffect(() => {
-      if (civicError) {
-        console.error("Civic Auth error:", civicError);
-        
-        // Check for session mismatch errors
-        if (civicError.message && 
-            (civicError.message.includes("session mismatch") || 
-             civicError.message.includes("authentication session"))) {
-          console.log("Detected session mismatch error, clearing local auth data");
-          
-          // Clear local storage auth data
-          localStorage.removeItem("auth_user");
-          
-          // Clear state
-          setUser(null);
-          setSolanaWalletAddress(null);
-          
-          // Show toast message
-          toast.error("Authentication session expired. Please sign in again.");
-          
-          // Redirect to sign-in after a short delay
-          setTimeout(() => {
-            router.push("/auth/signin");
-          }, 1500);
-        }
-      }
-    }, [civicError, router]);
-
     // Handle wallet creation and management
     useEffect(() => {
       const createAndSyncWallet = async () => {
@@ -260,70 +231,56 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Cast userContext to any to handle the solana property which might not be in the type
           const context = userContext as any;
           
-          console.log("⭐ Full Civic User Context:", context);
-          console.log("⭐ Civic User:", userContext.user);
+          console.log("⭐ Full Civic User Context:", JSON.stringify(context, null, 2));
+          console.log("⭐ User Object:", JSON.stringify(context.user, null, 2));
           
-          // Log picture URL if available
-          if (userContext.user.picture) {
-            console.log("⭐ Civic User Picture URL:", userContext.user.picture);
+          // Extract Solana wallet address if available
+          let solanaAddress = null;
+          
+          if (context.solana && typeof context.solana === 'object' && 'address' in context.solana) {
+            solanaAddress = context.solana.address;
+            console.log("⭐ Solana wallet address from context.solana:", solanaAddress);
+          } else if (context.user && context.user.solana && typeof context.user.solana === 'object' && 'address' in context.user.solana) {
+            solanaAddress = context.user.solana.address;
+            console.log("⭐ Solana wallet address from context.user.solana:", solanaAddress);
           }
           
-          // Check if user has a wallet using our helper function
-          if (!userHasWallet(context)) {
-            console.log("No Civic wallet found. Creating a Solana wallet for user...");
-            
-            // The user doesn't have a wallet yet, so we need to create one
-            if (canCreateWallet(context)) {
-              toast.loading("Setting up your Civic wallet...", { id: "wallet-creation" });
-              
-              // Create the wallet using the function we know exists (thanks to our type guard)
-              await (context as any).createWallet();
-              
-              toast.success("Wallet created successfully!", { id: "wallet-creation" });
-              console.log("Civic wallet created successfully!");
-              
-              // Reload to get updated context with the wallet
-              window.location.reload();
-            } else {
-              console.error("createWallet function not available on user context");
-            }
-          } else {
-            // User already has a wallet, extract and store the address
-            const civicWalletAddress = context.solana.address;
-            console.log("⭐ Existing Civic wallet found:", civicWalletAddress);
-            setSolanaWalletAddress(civicWalletAddress);
+          if (solanaAddress) {
+            console.log("⭐ Using Civic wallet address:", solanaAddress);
+            setSolanaWalletAddress(solanaAddress);
               
             // Update user data with wallet address if we have a user
             if (user) {
-              // Get the user's picture from Civic context if available
-              const civicPicture = userContext?.user?.picture || null;
-              if (civicPicture) {
-                console.log("⭐ Civic user picture found:", civicPicture);
-              }
-              
-              const updatedUser = { 
-                ...user, 
-                walletAddress: civicWalletAddress,
-                picture: civicPicture || user.picture
-              };
-              
-              setUser(updatedUser);
-              
-              // Store with a prominent wallet address
               const existingUserData = localStorage.getItem("auth_user") ? 
                 JSON.parse(localStorage.getItem("auth_user") || "{}") : {};
               
-              const mergedUserData = {
+              const updatedUser = { 
+                ...user,
                 ...existingUserData,
-                ...updatedUser,
-                // Ensure wallet address is properly set
-                walletAddress: civicWalletAddress,
-                // Ensure picture is set if available
-                picture: civicPicture || existingUserData.picture || null
+                walletAddress: solanaAddress,
+                // Make sure we capture the profile picture
+                picture: context.user?.picture || existingUserData.picture
               };
               
-              localStorage.setItem("auth_user", JSON.stringify(mergedUserData));
-              console.log("⭐ Updated user data with Civic wallet address:", mergedUserData);
+              setUser(updatedUser);
+              localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+              console.log("⭐ Updated user data with Civic wallet address:", updatedUser);
+            }
+          } else {
+            console.log("⭐ No Civic wallet address found");
+            
+            // Check if we can create a wallet
+            if (canCreateWallet(context)) {
+              toast.loading("Setting up your Civic wallet...", { id: "wallet-creation" });
+              
+              // Create the wallet using the function we know exists
+              await (context as any).createWallet();
+              
+              toast.success("Wallet created successfully!", { id: "wallet-creation" });
+              console.log("⭐ Civic wallet created successfully!");
+              
+              // Reload to get updated context with the wallet
+              window.location.reload();
             }
           }
         } catch (error) {

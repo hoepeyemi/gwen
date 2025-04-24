@@ -22,7 +22,6 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
-import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
 
@@ -62,49 +61,44 @@ const transactions: Transaction[] = [
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
   const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
-  const { user: civicUserContext } = useUser();
-  const civicUser = civicUserContext?.user;
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any>(null);
   
-  // Debug and initialize values
+  // Initialize user data from localStorage
   useEffect(() => {
-    console.log("Dashboard mounting");
-    console.log("Auth user:", user);
-    console.log("Civic user context:", civicUserContext);
-    console.log("Civic user:", civicUser);
-    console.log("Solana wallet address from auth:", solanaWalletAddress);
+    console.log("🔵 Dashboard mounting");
+    console.log("🔵 Auth user:", user);
+    console.log("🔵 Solana wallet address from auth:", solanaWalletAddress);
     
-    // Try to get wallet address either from auth provider or from Civic user context
-    if (solanaWalletAddress) {
-      console.log("Using wallet address from auth provider:", solanaWalletAddress);
-      setWalletAddress(solanaWalletAddress);
-    } else if (civicUserContext && civicUser) {
-      // Cast to Record<string, any> to handle type issues
-      const civicSolana = civicUser.solana as unknown as Record<string, any>;
-      if (civicSolana && 'address' in civicSolana) {
-        console.log("Found Civic Solana wallet:", civicSolana.address);
-        setWalletAddress(civicSolana.address);
-      }
-    } else {
-      // Fallback to localStorage
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          if (parsedUser.walletAddress) {
-            console.log("Using wallet address from localStorage:", parsedUser.walletAddress);
-            setWalletAddress(parsedUser.walletAddress);
-          }
+    try {
+      const storedUser = localStorage.getItem("auth_user");
+      if (storedUser) {
+        console.log("🔵 localStorage auth_user found");
+        const parsedUser = JSON.parse(storedUser);
+        setUserData(parsedUser);
+        console.log("🔵 Parsed user data:", parsedUser);
+        
+        // Prioritize solanaWalletAddress from auth, then from localStorage
+        if (solanaWalletAddress) {
+          console.log("🔵 Using wallet address from auth:", solanaWalletAddress);
+          setWalletAddress(solanaWalletAddress);
+        } else if (parsedUser.walletAddress) {
+          console.log("🔵 Using wallet address from localStorage:", parsedUser.walletAddress);
+          setWalletAddress(parsedUser.walletAddress);
+        } else {
+          console.log("🔵 No wallet address found");
         }
-      } catch (error) {
-        console.error("Error reading from localStorage:", error);
+      } else {
+        console.log("🔵 No auth_user in localStorage");
       }
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
     }
-  }, [user, civicUserContext, civicUser, solanaWalletAddress]);
+  }, [user, solanaWalletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -183,7 +177,7 @@ function DashboardContent() {
   };
 
   // If no user is signed in, show a message
-  if (!user) {
+  if (!user && !userData) {
     return (
       <div className="container mt-10 max-w-md mx-auto text-center">
         <Card>
@@ -214,25 +208,23 @@ function DashboardContent() {
       {/* User Profile Card */}
       <Card className="mb-4">
         <CardContent className="p-4 flex items-center">
-          <div className="relative h-16 w-16 rounded-full overflow-hidden mr-4">
-            {civicUser?.picture ? (
-              <img 
-                src={civicUser.picture} 
-                alt={civicUser.name || "User"} 
-                className="h-full w-full object-cover" 
-              />
-            ) : (
-              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-            )}
-          </div>
+          {userData?.picture ? (
+            <img 
+              src={userData.picture} 
+              alt="Profile" 
+              className="h-16 w-16 rounded-full mr-4 object-cover"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mr-4">
+              <User className="h-8 w-8 text-primary" />
+            </div>
+          )}
           <div>
             <h2 className="text-xl font-semibold">
-              {civicUser?.name || user?.name || "Welcome!"}
+              {userData?.name || "Welcome!"}
             </h2>
-            {civicUser?.email && (
-              <p className="text-gray-500 text-sm">{civicUser.email}</p>
+            {userData?.email && (
+              <p className="text-gray-500 text-sm">{userData.email}</p>
             )}
             {walletAddress ? (
               <p className="text-xs font-mono mt-1 text-gray-500">
