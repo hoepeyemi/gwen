@@ -1,22 +1,32 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { authMiddleware } from "@civic/auth-web3/nextjs/middleware";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// This middleware completely bypasses all auth checks to allow debugging
+// Custom middleware function that handles auth and also allows specific paths
 export function middleware(request: NextRequest) {
-  console.log('Middleware running for path:', request.nextUrl.pathname);
+  // Get the pathname from the URL
+  const path = request.nextUrl.pathname;
   
-  // Always allow access without any checks
+  // Allow direct access to the dashboard root
+  if (path === "/dashboard") {
+    return NextResponse.next();
+  }
+  
+  // For API routes and dashboard subpaths, use Civic auth middleware
+  if (path.startsWith("/api/") || (path.startsWith("/dashboard/") && path !== "/dashboard")) {
+    // Use the Civic auth middleware
+    return authMiddleware()(request);
+  }
+  
+  // Allow all other routes
   return NextResponse.next();
 }
 
-// Optional: exclude some paths from middleware if you want
 export const config = {
+  // Include the paths you wish to process with the middleware
   matcher: [
-    // Include paths you want middleware to run on
-    '/dashboard/:path*',
-    '/api/:path*',
-    
-    // Exclude static files and other paths that don't need middleware
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
-}; 
+    "/api/:path*",
+    "/dashboard",
+    "/dashboard/:path*"
+  ]
+} 

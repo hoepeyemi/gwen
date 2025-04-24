@@ -180,11 +180,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const storedUser = localStorage.getItem("auth_user");
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        
+        // If we have a wallet address in stored user data, set it in state
+        if (parsedUser.walletAddress) {
+          setSolanaWalletAddress(parsedUser.walletAddress);
+        }
+        
+        console.log("User loaded from localStorage:", parsedUser);
       } catch (error) {
         console.error("Failed to parse stored user", error);
         localStorage.removeItem("auth_user");
       }
+    } else {
+      console.log("No stored user found in localStorage");
     }
     setIsLoading(false);
   }, []);
@@ -318,9 +328,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error("Error reading existing user data:", error);
       }
 
-      // Log Civic user data for debugging
-      console.log("Civic user data:", civicUser);
-
       // Update our user state with Civic user data
       const userData: User = {
         id: parseInt(civicUser.id || '0'),
@@ -332,13 +339,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         hashedPin: existingHashedPin,
       };
 
-      // Store in local storage with additional picture field if available
-      const enhancedUserData = {
-        ...userData,
-        picture: civicUser.picture || null,
-      };
-      
-      localStorage.setItem("auth_user", JSON.stringify(enhancedUserData));
+      // Store in local storage
+      localStorage.setItem("auth_user", JSON.stringify(userData));
       
       // Update state
       setUser(userData);

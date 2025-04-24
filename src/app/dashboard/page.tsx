@@ -22,10 +22,8 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
-import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface Transaction {
   id: string;
@@ -62,82 +60,60 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
-  const { user: civicUserContext } = useUser();
-  const civicUser = civicUserContext?.user;
+  const { user, logout, refreshUserData } = useAuth();
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [userProfile, setUserProfile] = useState<{
-    name: string | null;
-    email: string | null;
-    picture: string | null;
-  }>({
-    name: null,
-    email: null,
-    picture: null,
-  });
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Initialize user data from localStorage on mount
+  // Debug output
   useEffect(() => {
+    console.log("Dashboard mounting");
+    console.log("Auth user:", user);
+    
     try {
-      // First check localStorage for user data
-      const userData = localStorage.getItem("auth_user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
+      const storedUser = localStorage.getItem("auth_user");
+      if (storedUser) {
+        console.log("localStorage auth_user found");
+        const parsedUser = JSON.parse(storedUser);
+        setUserData(parsedUser);
+        console.log("Parsed user data:", parsedUser);
         
-        // Update profile data from localStorage
-        setUserProfile({
-          name: parsedUser.name || null,
-          email: parsedUser.email || null,
-          picture: parsedUser.picture || null,
-        });
-        
-        // Update wallet address from localStorage
         if (parsedUser.walletAddress) {
+          console.log("Setting wallet address from localStorage:", parsedUser.walletAddress);
           setWalletAddress(parsedUser.walletAddress);
         }
+      } else {
+        console.log("No auth_user in localStorage");
       }
-      
-      // Then check civic user if available
-      if (civicUser) {
-        setUserProfile(prev => ({
-          name: civicUser.name || prev.name,
-          email: civicUser.email || prev.email,
-          picture: civicUser.picture || prev.picture,
-        }));
-      }
-      
-      // Set wallet address from context if available
-      if (solanaWalletAddress) {
-        setWalletAddress(solanaWalletAddress);
-      }
-      
-      setIsLoadingAuth(false);
     } catch (error) {
-      console.error("Error initializing user data:", error);
-      setIsLoadingAuth(false);
+      console.error("Error reading from localStorage:", error);
     }
-  }, [civicUser, solanaWalletAddress]);
+    
+    setIsLoading(false);
+  }, [user]);
   
-  // Initialize wallet address from localStorage only on client side
+  // Generate wallet address if needed
   useEffect(() => {
+    if (!walletAddress && userData) {
+      console.log("No wallet address found, generating one");
+      const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+      
       try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            console.log("INITIALIZING WALLET ADDRESS FROM STORAGE:", user.walletAddress);
-            setWalletAddress(user.walletAddress);
-          }
-        }
+        // Update userData with new wallet address
+        const updatedUserData = { ...userData, walletAddress: newAddress };
+        localStorage.setItem("auth_user", JSON.stringify(updatedUserData));
+        setUserData(updatedUserData);
+        setWalletAddress(newAddress);
+        console.log("Generated wallet address:", newAddress);
       } catch (error) {
-        console.error("Error initializing wallet address from localStorage:", error);
+        console.error("Error saving generated wallet address:", error);
       }
-  }, []);
+    }
+  }, [walletAddress, userData]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -170,7 +146,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
     } else {
-      toast.error("Wallet address not available. Please connect a wallet first.");
+      router.push("/receive");
     }
   };
 
@@ -178,7 +154,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      toast.error("Wallet address not available. Please connect a wallet first.");
+      toast.error("No wallet address found");
     }
   };
 
@@ -186,7 +162,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      toast.error("Wallet address not available. Please connect a wallet first.");
+      toast.error("No wallet address found");
     }
   };
 
@@ -198,7 +174,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
     } else {
-      toast.error("Wallet address not available. Please connect a wallet first.");
+      toast.error("No wallet address found");
     }
   };
 
@@ -215,63 +191,57 @@ function DashboardContent() {
     router.push("/auth/signin");
   };
 
-  // If still loading the auth state, show loading spinner
-  if (isLoadingAuth) {
+  // If still loading, show a loading indicator
+  if (isLoading) {
     return <DashboardLoading />;
-  }
-  
-  // If no user profile is found in localStorage, show sign in message
-  if (!userProfile.name && !userProfile.email) {
-    return (
-      <div className="container mt-10 max-w-md mx-auto text-center">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
-            <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
-            <Button onClick={() => router.push("/auth/signin")}>
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   return (
     <div className="container px-4 mx-auto">
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <div className="flex items-center">
-          <UserButton />
+        <div className="flex items-center gap-2">
+          {/* Only show sign out if we're authenticated with user data */}
+          {userData ? (
+            <>
+              <UserButton />
+              <Button size="sm" variant="ghost" onClick={handleSignOut}>
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={() => router.push("/auth/signin")}>
+              Sign In
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* User Profile Card */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex items-center">
-          <Avatar className="h-16 w-16 mr-4">
-            <AvatarImage src={userProfile.picture || undefined} />
-            <AvatarFallback>
-              <User className="h-8 w-8 text-gray-400" />
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-xl font-semibold">
-              {userProfile.name || "Welcome!"}
-            </h2>
-            {userProfile.email && (
-              <p className="text-gray-500 text-sm">{userProfile.email}</p>
-            )}
-            {walletAddress && (
-              <p className="text-xs font-mono mt-1 text-gray-500">
-                {walletAddress.length > 20
-                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                  : walletAddress}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* User Profile Section */}
+      {userData && (
+        <Card className="mb-4">
+          <CardContent className="p-4 flex items-center">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
+              <User className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">
+                {userData.name || "Welcome!"}
+              </h2>
+              {userData.email && (
+                <p className="text-gray-500 text-sm">{userData.email}</p>
+              )}
+              {walletAddress && (
+                <p className="text-xs font-mono mt-1 text-gray-500">
+                  {walletAddress.length > 20
+                    ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
+                    : walletAddress}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4">
         {/* Balance Card */}
