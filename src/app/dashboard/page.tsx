@@ -22,9 +22,9 @@ import {
   User,
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
+import { useUser } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 interface Transaction {
   id: string;
@@ -61,56 +61,50 @@ const transactions: Transaction[] = [
 
 // Create a separate component that uses useSearchParams
 function DashboardContent() {
-  const { user, logout, refreshUserData } = useAuth();
+  const { user, logout, refreshUserData, solanaWalletAddress } = useAuth();
+  const { user: civicUserContext } = useUser();
+  const civicUser = civicUserContext?.user;
   const [showBalance, setShowBalance] = useState(true);
   const [balance] = useState("673,000.56"); // Mock balance
   const router = useRouter();
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [userData, setUserData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Debug output
+  // Debug and initialize values
   useEffect(() => {
     console.log("Dashboard mounting");
     console.log("Auth user:", user);
+    console.log("Civic user context:", civicUserContext);
+    console.log("Civic user:", civicUser);
+    console.log("Solana wallet address from auth:", solanaWalletAddress);
     
-    try {
-      const storedUser = localStorage.getItem("auth_user");
-      if (storedUser) {
-        console.log("localStorage auth_user found");
-        const parsedUser = JSON.parse(storedUser);
-        setUserData(parsedUser);
-        console.log("Parsed user data:", parsedUser);
-        
-        if (parsedUser.walletAddress) {
-          console.log("Setting wallet address from localStorage:", parsedUser.walletAddress);
-          setWalletAddress(parsedUser.walletAddress);
+    // Try to get wallet address either from auth provider or from Civic user context
+    if (solanaWalletAddress) {
+      console.log("Using wallet address from auth provider:", solanaWalletAddress);
+      setWalletAddress(solanaWalletAddress);
+    } else if (civicUserContext && civicUser) {
+      // Cast to Record<string, any> to handle type issues
+      const civicSolana = civicUser.solana as unknown as Record<string, any>;
+      if (civicSolana && 'address' in civicSolana) {
+        console.log("Found Civic Solana wallet:", civicSolana.address);
+        setWalletAddress(civicSolana.address);
+      }
+    } else {
+      // Fallback to localStorage
+      try {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.walletAddress) {
+            console.log("Using wallet address from localStorage:", parsedUser.walletAddress);
+            setWalletAddress(parsedUser.walletAddress);
+          }
         }
-      } else {
-        console.log("No auth_user in localStorage");
-      }
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
-    }
-    
-    setIsLoading(false);
-  }, [user]);
-  
-  // Remove the wallet address generation effect and replace with one that checks
-  // for Civic authentication status
-  useEffect(() => {
-    // If we don't have a wallet address yet but have authenticated user data
-    if (!walletAddress && userData && !userData.walletAddress) {
-      console.log("No wallet address found in user data");
-      // Instead of generating a wallet, we'll redirect to auth if needed
-      if (!user) {
-        console.log("Not authenticated with Civic yet. Wallet address will be provided by Civic auth.");
-        // We could optionally redirect to auth here if we want to force authentication
-        // router.push("/auth/signin");
+      } catch (error) {
+        console.error("Error reading from localStorage:", error);
       }
     }
-  }, [walletAddress, userData, user, router]);
+  }, [user, civicUserContext, civicUser, solanaWalletAddress]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -188,9 +182,21 @@ function DashboardContent() {
     router.push("/auth/signin");
   };
 
-  // If still loading, show a loading indicator
-  if (isLoading) {
-    return <DashboardLoading />;
+  // If no user is signed in, show a message
+  if (!user) {
+    return (
+      <div className="container mt-10 max-w-md mx-auto text-center">
+        <Card>
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
+            <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
+            <Button onClick={() => router.push("/auth/signin")}>
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -198,65 +204,58 @@ function DashboardContent() {
       <div className="mb-6 mt-2 flex items-center justify-between">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2">
-          {/* Only show sign out if we're authenticated with user data */}
-          {userData ? (
-            <>
-              <UserButton />
-              <Button size="sm" variant="ghost" onClick={handleSignOut}>
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" onClick={() => router.push("/auth/signin")}>
-              Sign In
-            </Button>
-          )}
+          <UserButton />
+          <Button size="sm" variant="ghost" onClick={handleSignOut}>
+            Sign Out
+          </Button>
         </div>
       </div>
 
-      {/* User Profile Section */}
-      {userData && (
-        <Card className="mb-4">
-          <CardContent className="p-4 flex items-center">
-            <Avatar className="h-12 w-12 mr-4">
-              <AvatarImage 
-                src={userData.picture} 
-                alt={userData.name || "User"} 
+      {/* User Profile Card */}
+      <Card className="mb-4">
+        <CardContent className="p-4 flex items-center">
+          <div className="relative h-16 w-16 rounded-full overflow-hidden mr-4">
+            {civicUser?.picture ? (
+              <img 
+                src={civicUser.picture} 
+                alt={civicUser.name || "User"} 
+                className="h-full w-full object-cover" 
               />
-              <AvatarFallback className="text-lg">
-                {userData.name ? userData.name.substring(0, 2).toUpperCase() : "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-xl font-semibold">
-                {userData.name || "Welcome!"}
-              </h2>
-              {userData.email && (
-                <p className="text-gray-500 text-sm">{userData.email}</p>
-              )}
-              {walletAddress ? (
-                <p className="text-xs font-mono mt-1 text-gray-500">
-                  {walletAddress.length > 20
-                    ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                    : walletAddress}
-                </p>
-              ) : (
-                <div className="mt-2">
-                  <p className="text-xs text-amber-600 mb-1">No Civic wallet address found</p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="text-xs h-7 px-2"
-                    onClick={() => router.push("/auth/signin")}
-                  >
-                    Connect Civic Wallet
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            ) : (
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-8 w-8 text-primary" />
+              </div>
+            )}
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">
+              {civicUser?.name || user?.name || "Welcome!"}
+            </h2>
+            {civicUser?.email && (
+              <p className="text-gray-500 text-sm">{civicUser.email}</p>
+            )}
+            {walletAddress ? (
+              <p className="text-xs font-mono mt-1 text-gray-500">
+                {walletAddress.length > 20
+                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
+                  : walletAddress}
+              </p>
+            ) : (
+              <div className="mt-2">
+                <p className="text-xs text-amber-600 mb-1">No Civic wallet address found</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="text-xs h-7 px-2"
+                  onClick={() => router.push("/auth/signin")}
+                >
+                  Connect Civic Wallet
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4">
         {/* Balance Card */}
