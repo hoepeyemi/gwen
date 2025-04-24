@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useMediaQuery } from "~/hooks/useMediaQuery";
 
 export function Chart() {
   const [period, setPeriod] = useState<"1w" | "1m" | "3m" | "1y">("1m");
+  const isMobile = useMediaQuery("(max-width: 640px)");
   
   // Would normally come from a data API
   const data = {
@@ -39,7 +41,7 @@ export function Chart() {
   const maxValue = Math.max(...data[period].map(item => item.value));
   
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <div className="space-y-3">
       <div className="flex justify-end space-x-1 sm:space-x-2">
         {(["1w", "1m", "3m", "1y"] as const).map((p) => (
           <button
@@ -56,7 +58,7 @@ export function Chart() {
         ))}
       </div>
       
-      <div className="h-32 sm:h-40 w-full">
+      <div className="h-full w-full">
         <div className="flex h-full items-end justify-between">
           {data[period].map((item, index) => (
             <div key={index} className="flex h-full flex-col items-center justify-end">
@@ -67,7 +69,7 @@ export function Chart() {
                   opacity: 0.6 + (item.value / maxValue) * 0.4,
                 }}
               />
-              <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs text-gray-500">{item.day}</div>
+              <div className="mt-1 sm:mt-2 text-[8px] sm:text-xs text-gray-500">{item.day}</div>
             </div>
           ))}
         </div>
