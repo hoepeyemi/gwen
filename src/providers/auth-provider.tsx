@@ -28,6 +28,13 @@ function userHasWallet(userContext: any): userContext is {
     'address' in userContext.solana;
 }
 
+// Helper to check if user can create a wallet
+function canCreateWallet(userContext: any): boolean {
+  return userContext && 
+    'createWallet' in userContext && 
+    typeof userContext.createWallet === 'function';
+}
+
 interface User {
   id: number;
   email?: string | null;
@@ -197,7 +204,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     );
   };
 
-  // Component to handle Solana wallet management
+  // Component to handle Solana wallet creation and synchronization
   const SolanaWalletManager = () => {
     const { user: userContext, isLoading: civicLoading, error: civicError } = useUser();
 
@@ -230,38 +237,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     }, [civicError, router]);
 
-    // Handle existing wallet detection
+    // Handle wallet creation and management
     useEffect(() => {
-      // Skip if still loading or no user
-      if (civicLoading || !userContext || !userContext.user) {
-        return;
-      }
-
-      try {
-        // Cast userContext to any to handle the solana property which might not be in the type
-        const context = userContext as any;
-        
-        // Check if user has a wallet using our helper function
-        if (userHasWallet(context)) {
-          // User already has a wallet, extract and store the address
-          console.log("Existing wallet found:", context.solana.address);
-          setSolanaWalletAddress(context.solana.address);
-            
-          // Update user data with wallet address if we have a user
-          if (user) {
-            const updatedUser = { 
-              ...user, 
-              walletAddress: context.solana.address 
-            };
-            
-            setUser(updatedUser);
-            localStorage.setItem("auth_user", JSON.stringify(updatedUser));
-          }
+      const createAndSyncWallet = async () => {
+        // Skip if still loading or no user
+        if (civicLoading || !userContext || !userContext.user) {
+          return;
         }
-      } catch (error) {
-        console.error("Error managing Solana wallet:", error);
-      }
-    }, [userContext?.user, civicLoading, user]);
+
+        try {
+          // Cast userContext to any to handle the solana property which might not be in the type
+          const context = userContext as any;
+          
+          // Check if user has a wallet using our helper function
+          if (!userHasWallet(context)) {
+            console.log("No wallet found. Creating a Solana wallet for user...");
+            
+            // The user doesn't have a wallet yet, so we need to create one
+            if (canCreateWallet(context)) {
+              toast.loading("Setting up your Solana wallet...", { id: "wallet-creation" });
+              
+              // Create the wallet using the function we know exists (thanks to our type guard)
+              await (context as any).createWallet();
+              
+              toast.success("Wallet created successfully!", { id: "wallet-creation" });
+              console.log("Solana wallet created successfully!");
+              
+              // Reload to get updated context with the wallet
+              window.location.reload();
+            } else {
+              console.error("createWallet function not available on user context");
+            }
+          } else {
+            // User already has a wallet, extract and store the address
+            console.log("Existing wallet found:", context.solana.address);
+            setSolanaWalletAddress(context.solana.address);
+              
+            // Update user data with wallet address if we have a user
+            if (user) {
+              const updatedUser = { 
+                ...user, 
+                walletAddress: context.solana.address 
+              };
+              
+              setUser(updatedUser);
+              localStorage.setItem("auth_user", JSON.stringify(updatedUser));
+            }
+          }
+        } catch (error) {
+          console.error("Error managing Solana wallet:", error);
+          toast.error("Failed to set up your wallet. Please try again.");
+        }
+      };
+
+      createAndSyncWallet();
+    }, [userContext?.user, civicLoading]);
 
     return null;
   };
