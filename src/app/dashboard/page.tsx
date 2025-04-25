@@ -94,10 +94,10 @@ function DashboardContent() {
         }
       } else {
         console.log("🔵 No auth_user in localStorage");
-      }
-    } catch (error) {
+          }
+      } catch (error) {
       console.error("Error reading from localStorage:", error);
-    }
+      }
   }, [user, solanaWalletAddress]);
   
   // Check if user is coming from bank connection flow
@@ -129,23 +129,54 @@ function DashboardContent() {
   // Navigation handlers
   const handleReceive = () => {
     if (walletAddress) {
-      router.push(`/wallet/${walletAddress}/receive`);
+      // Extract the address part if it contains a colon
+      const addressPart = walletAddress.includes(':') 
+        ? walletAddress.split(':')[1] 
+        : walletAddress;
+      
+      router.push(`/wallet/${addressPart}/receive`);
     } else {
       router.push("/receive");
     }
   };
 
   const handleSend = () => {
+    console.log("Send button clicked");
+    console.log("Current wallet address:", walletAddress);
+    
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/send`);
+      // Extract the address part if it contains a colon (e.g., "stellar:123abc")
+      const addressPart = walletAddress.includes(':') 
+        ? walletAddress.split(':')[1] 
+        : walletAddress;
+      
+      console.log("Using address for navigation:", addressPart);
+      router.push(`/dashboard/${addressPart}/send`);
     } else {
       toast.error("No wallet address found");
+      
+      // Check if userData exists, and try to generate/obtain a wallet address
+      try {
+        if (userData) {
+          // Use a temporary address for testing if needed
+          const tempAddress = "demo" + Math.floor(Math.random() * 1000);
+          console.log("Using temporary address for testing:", tempAddress);
+          router.push(`/dashboard/${tempAddress}/send`);
+        }
+      } catch (error) {
+        console.error("Error navigating to send page:", error);
+      }
     }
   };
 
   const handlePayBills = () => {
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/bills`);
+      // Extract the address part if it contains a colon
+      const addressPart = walletAddress.includes(':') 
+        ? walletAddress.split(':')[1] 
+        : walletAddress;
+      
+      router.push(`/dashboard/${addressPart}/bills`);
     } else {
       toast.error("No wallet address found");
     }
@@ -157,7 +188,12 @@ function DashboardContent() {
 
   const handleInvestments = () => {
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/investments`);
+      // Extract the address part if it contains a colon
+      const addressPart = walletAddress.includes(':') 
+        ? walletAddress.split(':')[1] 
+        : walletAddress;
+      
+      router.push(`/dashboard/${addressPart}/investments`);
     } else {
       toast.error("No wallet address found");
     }
@@ -165,7 +201,12 @@ function DashboardContent() {
 
   const handleWallet = () => {
     if (walletAddress) {
-      router.push(`/wallet/${walletAddress}`);
+      // Extract the address part if it contains a colon
+      const addressPart = walletAddress.includes(':') 
+        ? walletAddress.split(':')[1] 
+        : walletAddress;
+      
+      router.push(`/wallet/${addressPart}`);
     } else {
       router.push("/wallet");
     }
@@ -203,7 +244,7 @@ function DashboardContent() {
             Sign Out
           </Button>
         </div>
-      </div>
+        </div>
 
       {/* User Profile Card */}
       <Card className="mb-4">
