@@ -126,57 +126,42 @@ function DashboardContent() {
       : `$${amount.toLocaleString()}`;
   };
 
+  // Helper to clean up Solana wallet address for route use
+  const getCleanWalletAddress = (address: string) => {
+    // For Solana wallets like "solana:AbCdEf123456" just use the part after ":"
+    if (address.includes(':')) {
+      return address.split(':')[1];
+    }
+    return address;
+  };
+
   // Navigation handlers
   const handleReceive = () => {
     if (walletAddress) {
-      // Extract the address part if it contains a colon
-      const addressPart = walletAddress.includes(':') 
-        ? walletAddress.split(':')[1] 
-        : walletAddress;
-      
-      router.push(`/wallet/${addressPart}/receive`);
+      const cleanAddress = getCleanWalletAddress(walletAddress);
+      router.push(`/wallet/${cleanAddress}/receive`);
     } else {
       router.push("/receive");
     }
   };
 
   const handleSend = () => {
-    console.log("Send button clicked");
-    console.log("Current wallet address:", walletAddress);
-    
     if (walletAddress) {
-      // Extract the address part if it contains a colon (e.g., "stellar:123abc")
-      const addressPart = walletAddress.includes(':') 
-        ? walletAddress.split(':')[1] 
-        : walletAddress;
+      const cleanAddress = getCleanWalletAddress(walletAddress);
+      const sendPath = `/dashboard/${cleanAddress}/send`;
+      console.log("🔵 Navigating to send page:", sendPath);
       
-      console.log("Using address for navigation:", addressPart);
-      router.push(`/dashboard/${addressPart}/send`);
+      // Using router.push with a pathname
+      router.push(sendPath);
     } else {
       toast.error("No wallet address found");
-      
-      // Check if userData exists, and try to generate/obtain a wallet address
-      try {
-        if (userData) {
-          // Use a temporary address for testing if needed
-          const tempAddress = "demo" + Math.floor(Math.random() * 1000);
-          console.log("Using temporary address for testing:", tempAddress);
-          router.push(`/dashboard/${tempAddress}/send`);
-        }
-      } catch (error) {
-        console.error("Error navigating to send page:", error);
-      }
     }
   };
 
   const handlePayBills = () => {
     if (walletAddress) {
-      // Extract the address part if it contains a colon
-      const addressPart = walletAddress.includes(':') 
-        ? walletAddress.split(':')[1] 
-        : walletAddress;
-      
-      router.push(`/dashboard/${addressPart}/bills`);
+      const cleanAddress = getCleanWalletAddress(walletAddress);
+      router.push(`/dashboard/${cleanAddress}/bills`);
     } else {
       toast.error("No wallet address found");
     }
@@ -188,12 +173,8 @@ function DashboardContent() {
 
   const handleInvestments = () => {
     if (walletAddress) {
-      // Extract the address part if it contains a colon
-      const addressPart = walletAddress.includes(':') 
-        ? walletAddress.split(':')[1] 
-        : walletAddress;
-      
-      router.push(`/dashboard/${addressPart}/investments`);
+      const cleanAddress = getCleanWalletAddress(walletAddress);
+      router.push(`/dashboard/${cleanAddress}/investments`);
     } else {
       toast.error("No wallet address found");
     }
@@ -201,12 +182,8 @@ function DashboardContent() {
 
   const handleWallet = () => {
     if (walletAddress) {
-      // Extract the address part if it contains a colon
-      const addressPart = walletAddress.includes(':') 
-        ? walletAddress.split(':')[1] 
-        : walletAddress;
-      
-      router.push(`/wallet/${addressPart}`);
+      const cleanAddress = getCleanWalletAddress(walletAddress);
+      router.push(`/wallet/${cleanAddress}`);
     } else {
       router.push("/wallet");
     }
@@ -269,9 +246,12 @@ function DashboardContent() {
             )}
             {walletAddress ? (
               <p className="text-xs font-mono mt-1 text-gray-500">
-                {walletAddress.length > 20
-                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                  : walletAddress}
+                {/* Show cleaned address, or display it nicely truncated */}
+                {walletAddress.includes(':') 
+                  ? walletAddress.replace('solana:', 'Solana: ') 
+                  : walletAddress.length > 20
+                    ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
+                    : walletAddress}
               </p>
             ) : (
               <div className="mt-2">
