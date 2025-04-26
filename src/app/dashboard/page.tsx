@@ -130,7 +130,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-    } else {
+              } else {
       router.push("/receive");
     }
   };
@@ -139,7 +139,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/send`);
     } else {
-      router.push("/send");
+      toast.error("No wallet address found");
     }
   };
 
@@ -147,8 +147,7 @@ function DashboardContent() {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/bills`);
     } else {
-      // Redirect to bills page which will handle authentication
-      router.push("/bills");
+      toast.error("No wallet address found");
     }
   };
 
@@ -159,9 +158,8 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-    } else {
-      // Redirect to investments page which will handle authentication
-      router.push("/investments");
+            } else {
+      toast.error("No wallet address found");
     }
   };
 

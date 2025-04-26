@@ -76,7 +76,7 @@ export default function SendPage() {
 
   const handleSuccess = () => {
     clickFeedback("success");
-    router.push("/dashboard");
+    router.push("/wallet/${address}");
   };
 
   if (showPreview) {
