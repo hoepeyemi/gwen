@@ -20,10 +20,13 @@ import {
   CreditCard,
   Banknote,
   User,
+  ArrowDownToLine,
+  ArrowRight
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
+import { shortStellarAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -36,21 +39,21 @@ interface Transaction {
 // Mock transactions data
 const transactions: Transaction[] = [
   {
-    id: "1",
+    id: "tx1",
     type: "send",
     amount: 50,
     recipient: "Jane Smith",
     date: "2023-06-10",
   },
   {
-    id: "2",
+    id: "tx2",
     type: "receive",
     amount: 120,
     recipient: "Alice Brown",
     date: "2023-06-07",
   },
   {
-    id: "3",
+    id: "tx3",
     type: "send",
     amount: 15,
     recipient: "Bob Johnson",
@@ -67,12 +70,22 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [redirected, setRedirected] = useState(false);
   
   // Initialize user data from localStorage
   useEffect(() => {
     console.log("🔵 Dashboard mounting");
     console.log("🔵 Auth user:", user);
     console.log("🔵 Solana wallet address from auth:", solanaWalletAddress);
+    
+    // Check if the pin was already verified in this session
+    const pinVerified = searchParams.get("pinVerified") === "true";
+    if (pinVerified) {
+      setIsPinVerified(true);
+      setIsVerifying(false);
+    }
     
     try {
       const storedUser = localStorage.getItem("auth_user");
@@ -91,14 +104,39 @@ function DashboardContent() {
           setWalletAddress(parsedUser.walletAddress);
         } else {
           console.log("🔵 No wallet address found");
-          }
+        }
+        
+        // Check PIN verification
+        if (!pinVerified) {
+          // Check if user has a PIN set
+          const timer = setTimeout(() => {
+            // Check if hashedPin is null (no PIN set)
+            if (parsedUser.hashedPin === null) {
+              console.log("User has no PIN set, will redirect to PIN setup");
+              if (parsedUser.id) {
+                router.replace(`/wallet/onboarding/${parsedUser.id}`);
+              } else {
+                setIsPinVerified(true); // Skip PIN for now if no user ID
+                setIsVerifying(false);
+              }
+              return;
+            } else {
+              setIsPinVerified(true);
+              setIsVerifying(false);
+            }
+          }, 1000);
+          
+          return () => clearTimeout(timer);
+        }
       } else {
         console.log("🔵 No auth_user in localStorage");
-          }
-      } catch (error) {
-      console.error("Error reading from localStorage:", error);
+        setIsVerifying(false);
       }
-  }, [user, solanaWalletAddress]);
+    } catch (error) {
+      console.error("Error reading from localStorage:", error);
+      setIsVerifying(false);
+    }
+  }, [user, solanaWalletAddress, searchParams, router]);
   
   // Check if user is coming from bank connection flow
   const bankConnected = searchParams.get("bankConnected") === "true";
@@ -130,14 +168,14 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-              } else {
+    } else {
       router.push("/receive");
     }
   };
 
   const handleSend = () => {
     if (walletAddress) {
-      router.push(`/wallet/${walletAddress}/send`);
+      router.push(`/dashboard/${walletAddress}/send`);
     } else {
       toast.error("No wallet address found");
     }
@@ -158,7 +196,7 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-            } else {
+    } else {
       toast.error("No wallet address found");
     }
   };
@@ -175,6 +213,30 @@ function DashboardContent() {
     logout();
     router.push("/auth/signin");
   };
+
+  // Show loading spinner while verifying
+  if (isVerifying) {
+    return <div className="flex flex-col items-center justify-center p-8">
+      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
+      <p>Verifying security...</p>
+    </div>;
+  }
+  
+  // If PIN isn't verified and we haven't already redirected, redirect to PIN page
+  if (!isPinVerified && !redirected && user) {
+    console.log("Redirecting to PIN verification page");
+    setRedirected(true); // Set flag to prevent multiple redirects
+    
+    // Use a setTimeout to allow the state update to complete before redirecting
+    setTimeout(() => {
+      router.replace("/auth/pin?redirectTo=/dashboard?pinVerified=true");
+    }, 100);
+    
+    return <div className="flex flex-col items-center justify-center p-8">
+      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
+      <p>Redirecting to PIN verification...</p>
+    </div>;
+  }
 
   // If no user is signed in, show a message
   if (!user && !userData) {
@@ -194,307 +256,194 @@ function DashboardContent() {
   }
 
   return (
-    <div className="container px-4 mx-auto">
-      <div className="mb-6 mt-2 flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+    <div className="container px-4 py-4 mx-auto max-w-md">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Welcome, {userData?.firstName || userData?.name?.split(' ')[0] || "User"}
+        </h1>
         <div className="flex items-center gap-2">
           <UserButton />
           <Button size="sm" variant="ghost" onClick={handleSignOut}>
             Sign Out
           </Button>
         </div>
-        </div>
+      </div>
 
       {/* User Profile Card */}
-      <Card className="mb-4">
-        <CardContent className="p-4 flex items-center">
-          {userData?.picture ? (
-            <img 
-              src={userData.picture} 
-              alt="Profile" 
-              className="h-16 w-16 rounded-full mr-4 object-cover"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mr-4">
-              <User className="h-8 w-8 text-primary" />
-            </div>
-          )}
-          <div>
-            <h2 className="text-xl font-semibold">
-              {userData?.name || "Welcome!"}
-            </h2>
-            {userData?.email && (
-              <p className="text-gray-500 text-sm">{userData.email}</p>
-            )}
-            {walletAddress ? (
-              <p className="text-xs font-mono mt-1 text-gray-500">
-                {walletAddress.length > 20
-                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                  : walletAddress}
-              </p>
+      <Card className="mb-4 overflow-hidden bg-blue-600 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-center mb-4">
+            {userData?.picture ? (
+              <img 
+                src={userData.picture} 
+                alt="Profile" 
+                className="h-12 w-12 rounded-full mr-4 object-cover border-2 border-blue-300"
+              />
             ) : (
-              <div className="mt-2">
-                <p className="text-xs text-amber-600 mb-1">No Civic wallet address found</p>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="text-xs h-7 px-2"
-                  onClick={() => router.push("/auth/signin")}
-                >
-                  Connect Civic Wallet
-                </Button>
+              <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center mr-4 border-2 border-blue-300">
+                <User className="h-6 w-6 text-white" />
               </div>
             )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4">
-        {/* Balance Card */}
-        <Card>
-          <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold">Balance</CardTitle>
-            <Button variant="ghost" size="icon" onClick={toggleBalanceVisibility}>
-                {showBalance ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
+            <div>
+              <h2 className="text-lg font-semibold text-white">
+                {userData?.name || "Welcome!"}
+              </h2>
+              {userData?.email && (
+                <p className="text-xs text-blue-200">{userData.email}</p>
               )}
-            </Button>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-3xl font-bold">
-              {showBalance ? formatCurrency(balance) : "********"}
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
-              <Button
-                onClick={handleReceive}
-                className="flex flex-col items-center h-auto py-2 text-xs"
-                variant="outline"
+          </div>
+          
+          <div className="space-y-1">
+            <h2 className="text-sm font-medium text-blue-100">Current Balance</h2>
+            <div className="flex items-center gap-2">
+              <p className="text-3xl font-bold">
+                ${showBalance ? balance : "••••••"}
+              </p>
+              <button 
+                onClick={toggleBalanceVisibility}
+                className="rounded-full p-1 hover:bg-blue-500"
               >
-                <ArrowDown className="h-4 w-4 mb-1" />
-                Receive
-              </Button>
+                {showBalance ? (
+                  <EyeOff className="h-4 w-4 text-blue-100" />
+                ) : (
+                  <Eye className="h-4 w-4 text-blue-100" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-2">
             <Button 
-                onClick={handleSend}
-                className="flex flex-col items-center h-auto py-2 text-xs"
               variant="outline" 
-              >
-                <ArrowUp className="h-4 w-4 mb-1" />
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+              onClick={handleSend}
+              disabled={!walletAddress}
+            >
+              <ArrowUpRight className="mr-2 h-4 w-4" />
               Send
             </Button>
             <Button 
-                onClick={handleWallet}
-                className="flex flex-col items-center h-auto py-2 text-xs"
-                variant="outline"
-              >
-                <Wallet className="h-4 w-4 mb-1" />
-                Wallet
-              </Button>
-              <Button
-                onClick={handlePayBills}
-                className="flex flex-col items-center h-auto py-2 text-xs"
               variant="outline" 
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+              onClick={handleReceive}
             >
-                <Receipt className="h-4 w-4 mb-1" />
-                Bills
+              <ArrowDownToLine className="mr-2 h-4 w-4" />
+              Receive
             </Button>
+          </div>
+          
+          {walletAddress && (
+            <div className="mt-4 text-center text-sm text-blue-100">
+              Wallet Address: {shortStellarAddress(walletAddress)}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 mb-6">
+        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handleSend}>
+          <CardContent className="flex items-center space-x-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+              <ArrowUpRight className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold">Send Money</h3>
+              <p className="text-sm text-gray-500">Transfer money to other users</p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Investments and Banking */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Investment Card */}
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base font-semibold">Invest</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Leaf className="h-6 w-6 text-green-500 mr-2" />
-                  <div>
-                    <p className="font-medium">Earn 8%</p>
-                    <p className="text-xs text-gray-500">Sustainable funds</p>
-                  </div>
+        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handlePayBills}>
+          <CardContent className="flex items-center space-x-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <Receipt className="h-6 w-6 text-green-600" />
             </div>
-                <Button
-                  size="sm"
-                  onClick={handleInvestments}
-                  className="h-8"
-                >
-                  <ArrowUpRight className="h-4 w-4 mr-1" /> Invest
-                </Button>
+            <div>
+              <h3 className="font-semibold">Pay Bills</h3>
+              <p className="text-sm text-gray-500">Pay your utility bills and more</p>
             </div>
           </CardContent>
         </Card>
 
-          {/* Banking Card */}
-          <Card>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-base font-semibold">Banking</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Landmark className="h-6 w-6 text-blue-500 mr-2" />
-                  <div>
-                    <p className="font-medium">Connect Bank</p>
-                    <p className="text-xs text-gray-500">Fast transfers</p>
-                  </div>
+        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handleReceive}>
+          <CardContent className="flex items-center space-x-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
+              <ArrowDownToLine className="h-6 w-6 text-purple-600" />
             </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleConnectBank}
-                  className="h-8"
-                >
-                  Connect
-                </Button>
+            <div>
+              <h3 className="font-semibold">Receive Money</h3>
+              <p className="text-sm text-gray-500">Get paid by other users</p>
             </div>
           </CardContent>
         </Card>
-            </div>
+      </div>
 
-        {/* Chart */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base font-semibold">Activity Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <Chart />
-          </CardContent>
-        </Card>
-
-        {/* Transactions */}
-        <Card>
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-base font-semibold">Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <Tabs defaultValue="all">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="sent">Sent</TabsTrigger>
-                <TabsTrigger value="received">Received</TabsTrigger>
+      <Tabs defaultValue="transactions">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="banking">Banking</TabsTrigger>
         </TabsList>
-              <TabsContent value="all">
-                <div className="space-y-4">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center">
-                        <div
-                          className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                            transaction.type === "send"
-                              ? "bg-red-100"
-                              : "bg-green-100"
-                          }`}
-                        >
-                          {transaction.type === "send" ? (
-                            <ArrowUp
-                              className={`h-5 w-5 ${
-                                transaction.type === "send"
-                                  ? "text-red-500"
-                                  : "text-green-500"
-                              }`}
-                            />
+        
+        <TabsContent value="transactions" className="space-y-4 pt-4">
+          {transactions.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <p className="text-gray-500">No transactions yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map((tx) => (
+                <Card key={tx.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === "receive" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
+                          {tx.type === "receive" ? (
+                            <ArrowDown className="h-5 w-5" />
                           ) : (
-                            <ArrowDown
-                              className="h-5 w-5 text-green-500"
-                            />
+                            <ArrowUp className="h-5 w-5" />
                           )}
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium">
-                            {transaction.type === "send"
-                              ? `Sent to ${transaction.recipient}`
-                              : `Received from ${transaction.recipient}`}
-                          </p>
+                        <div>
+                          <p className="font-medium">{tx.recipient}</p>
                           <p className="text-xs text-gray-500">
-                            {transaction.date}
+                            {new Date(tx.date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <div
-                        className={`text-sm font-semibold ${
-                          transaction.type === "send"
-                            ? "text-red-500"
-                            : "text-green-500"
-                        }`}
-                      >
-                        {transaction.type === "send" ? "-" : "+"}
-                        {formatCurrency(transaction.amount)}
+                      <div className="flex items-center gap-2">
+                        <p className={`font-semibold ${tx.type === "receive" ? "text-green-600" : "text-red-600"}`}>
+                          {tx.type === "receive" ? "+" : "-"}${tx.amount}
+                        </p>
+                        <ArrowRight className="h-4 w-4 text-gray-400" />
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
+          )}
         </TabsContent>
-              <TabsContent value="sent">
-                <div className="space-y-4">
-                  {transactions
-                    .filter((t) => t.type === "send")
-                    .map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                            <ArrowUp className="h-5 w-5 text-red-500" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium">
-                              Sent to {transaction.recipient}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {transaction.date}
+        
+        <TabsContent value="banking" className="space-y-4 pt-4">
+          <Card>
+            <CardContent className="p-6 text-center">
+              <div className="mb-4">
+                <p className="text-lg font-medium">Connect your bank account</p>
+                <p className="text-sm text-gray-500">
+                  Link your bank for faster transfers and withdrawals
                 </p>
               </div>
-                        </div>
-                        <div className="text-sm font-semibold text-red-500">
-                          -{formatCurrency(transaction.amount)}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="received">
-                <div className="space-y-4">
-                  {transactions
-                    .filter((t) => t.type === "receive")
-                    .map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                            <ArrowDown className="h-5 w-5 text-green-500" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium">
-                              Received from {transaction.recipient}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {transaction.date}
-                  </p>
-                </div>
-              </div>
-                        <div className="text-sm font-semibold text-green-500">
-                          +{formatCurrency(transaction.amount)}
-                </div>
-                </div>
-                    ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+              <Button 
+                className="w-full"
+                onClick={handleConnectBank}
+              >
+                Connect Bank
+              </Button>
             </CardContent>
           </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
