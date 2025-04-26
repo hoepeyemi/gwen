@@ -91,7 +91,7 @@ function DashboardContent() {
           setWalletAddress(parsedUser.walletAddress);
         } else {
           console.log("🔵 No wallet address found");
-        }
+          }
       } else {
         console.log("🔵 No auth_user in localStorage");
           }
@@ -126,33 +126,18 @@ function DashboardContent() {
       : `$${amount.toLocaleString()}`;
   };
 
-  // Helper to clean up Solana wallet address for route use
-  const getCleanWalletAddress = (address: string) => {
-    // For Solana wallets like "solana:AbCdEf123456" just use the part after ":"
-    if (address.includes(':')) {
-      return address.split(':')[1];
-    }
-    return address;
-  };
-
   // Navigation handlers
   const handleReceive = () => {
     if (walletAddress) {
-      const cleanAddress = getCleanWalletAddress(walletAddress);
-      router.push(`/wallet/${cleanAddress}/receive`);
-    } else {
+      router.push(`/wallet/${walletAddress}/receive`);
+              } else {
       router.push("/receive");
     }
   };
 
   const handleSend = () => {
     if (walletAddress) {
-      const cleanAddress = getCleanWalletAddress(walletAddress);
-      const sendPath = `/dashboard/${cleanAddress}/send`;
-      console.log("🔵 Navigating to send page:", sendPath);
-      
-      // Using router.push with a pathname
-      router.push(sendPath);
+      router.push(`/dashboard/${walletAddress}/send`);
     } else {
       toast.error("No wallet address found");
     }
@@ -160,8 +145,7 @@ function DashboardContent() {
 
   const handlePayBills = () => {
     if (walletAddress) {
-      const cleanAddress = getCleanWalletAddress(walletAddress);
-      router.push(`/dashboard/${cleanAddress}/bills`);
+      router.push(`/dashboard/${walletAddress}/bills`);
     } else {
       toast.error("No wallet address found");
     }
@@ -173,17 +157,15 @@ function DashboardContent() {
 
   const handleInvestments = () => {
     if (walletAddress) {
-      const cleanAddress = getCleanWalletAddress(walletAddress);
-      router.push(`/dashboard/${cleanAddress}/investments`);
-    } else {
+      router.push(`/dashboard/${walletAddress}/investments`);
+            } else {
       toast.error("No wallet address found");
     }
   };
 
   const handleWallet = () => {
     if (walletAddress) {
-      const cleanAddress = getCleanWalletAddress(walletAddress);
-      router.push(`/wallet/${cleanAddress}`);
+      router.push(`/wallet/${walletAddress}`);
     } else {
       router.push("/wallet");
     }
@@ -246,12 +228,9 @@ function DashboardContent() {
             )}
             {walletAddress ? (
               <p className="text-xs font-mono mt-1 text-gray-500">
-                {/* Show cleaned address, or display it nicely truncated */}
-                {walletAddress.includes(':') 
-                  ? walletAddress.replace('solana:', 'Solana: ') 
-                  : walletAddress.length > 20
-                    ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                    : walletAddress}
+                {walletAddress.length > 20
+                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
+                  : walletAddress}
               </p>
             ) : (
               <div className="mt-2">
