@@ -137,7 +137,7 @@ function DashboardContent() {
 
   const handleSend = () => {
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/send`);
+      router.push(`/wallet/${walletAddress}/send`);
     } else {
       toast.error("No wallet address found");
     }
