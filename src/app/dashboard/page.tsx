@@ -24,6 +24,7 @@ import {
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
+import { shortStellarAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -137,7 +138,7 @@ function DashboardContent() {
 
   const handleSend = () => {
     if (walletAddress) {
-      router.push(`/wallet/${walletAddress}/send`);
+      router.push(`/dashboard/${walletAddress}/send`);
     } else {
       router.push("/send");
     }
@@ -227,11 +228,19 @@ function DashboardContent() {
               <p className="text-gray-500 text-sm">{userData.email}</p>
             )}
             {walletAddress ? (
-              <p className="text-xs font-mono mt-1 text-gray-500">
-                {walletAddress.length > 20
-                  ? `${walletAddress.substring(0, 10)}...${walletAddress.substring(walletAddress.length - 10)}`
-                  : walletAddress}
-              </p>
+              <div>
+                <p className="text-xs font-mono mt-1 text-gray-500">
+                  {shortStellarAddress(walletAddress)}
+                </p>
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 text-xs"
+                  onClick={() => router.push(`/wallet/${walletAddress}`)}
+                >
+                  View Wallet
+                </Button>
+              </div>
             ) : (
               <div className="mt-2">
                 <p className="text-xs text-amber-600 mb-1">No Civic wallet address found</p>
