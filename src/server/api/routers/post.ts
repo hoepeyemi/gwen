@@ -129,18 +129,28 @@ export const postRouter = createTRPCRouter({
         if (!user) {
           throw new Error("User not found. Please request a new verification code.");
         }
-
-        // Check if we're in development mode with SMS disabled
+        
+        // Always allow "000000" as a valid OTP in development mode when SMS is disabled
         const isDev = process.env.NODE_ENV === 'development';
         const isSmsEnabled = String(env.ENABLE_SMS) === "true";
-        
-        // In development mode with SMS disabled, bypass verification entirely
-        if (isDev && !isSmsEnabled) {
-          console.log("DEV MODE (SMS disabled): Bypassing OTP verification");
+        if (input.otp === "000000" && isDev && !isSmsEnabled) {
+          console.log("DEV MODE (SMS disabled): Accepting default OTP code 000000");
+          
+          // Update verification record to mark as verified
+          await ctx.db.oTPVerification.updateMany({
+            where: {
+              userId: user.id,
+              verified: false,
+            },
+            data: {
+              verified: true,
+            },
+          });
+          
           return user;
         }
         
-        // For production or when SMS is enabled, perform actual verification
+        // Find verification record
         const verification = await ctx.db.oTPVerification.findFirst({
           where: {
             userId: user.id,
@@ -153,16 +163,10 @@ export const postRouter = createTRPCRouter({
         });
         
         if (!verification) {
-          console.error("OTP verification failed:", { 
-            userId: user.id,
-            inputOtp: input.otp,
-            phone: input.phone,
-            timestamp: new Date().toISOString()
-          });
-          throw new Error("Invalid or expired verification code");
+          throw new Error("Invalid or expired verification code. Please request a new one.");
         }
         
-        // Mark as verified
+        // Mark OTP as verified
         await ctx.db.oTPVerification.update({
           where: {
             id: verification.id,
