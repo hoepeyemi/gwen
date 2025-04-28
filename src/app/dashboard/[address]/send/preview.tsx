@@ -26,24 +26,6 @@ import { api } from "~/trpc/react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 
-// Import for environment variables
-import { env } from "~/env.js";
-
-// Client-side env check (will be undefined in client, falls back to checking NODE_ENV)
-const isMockKyc = () => {
-  // Check if we're on the client side
-  if (typeof window !== 'undefined') {
-    // Try to get from Next.js public env variables
-    if (process.env.NEXT_PUBLIC_MOCK_KYC !== undefined) {
-      return process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
-    }
-    
-    // Otherwise default to checking NODE_ENV for development
-    return process.env.NODE_ENV === 'development';
-  }
-  return false;
-};
-
 interface SendPreviewProps {
   amount: number;
   recipientName: string;
@@ -175,6 +157,9 @@ export default function SendPreview({
   
   // Initialize KYC verification process
   const initializeKycVerification = () => {
+    // Check if MOCK_KYC is enabled
+    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
+    
     // Check if we have a valid transfer in local storage or generate a mock one
     let storedTransferId = null;
     try {
@@ -207,6 +192,15 @@ export default function SendPreview({
     }
     
     setTransferId(newTransferId);
+    
+    // If MOCK_KYC is enabled, skip KYC verification and go straight to payment processing
+    if (mockKycEnabled) {
+      console.log("MOCK_KYC enabled, skipping KYC verification");
+      processPayment();
+      return;
+    }
+    
+    // Otherwise, show the KYC verification form
     setShowKycVerification(true);
     setShowOtpVerification(false);
     setIsLoading(false);
@@ -229,13 +223,11 @@ export default function SendPreview({
     clickFeedback();
     setKycError("");
 
-    // Check if we should mock KYC
-    const shouldMockKyc = isMockKyc();
+    // Check if MOCK_KYC is enabled
+    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
     
-    if (shouldMockKyc) {
+    if (mockKycEnabled) {
       console.log("MOCK_KYC enabled, skipping KYC verification");
-      setIsLoading(true);
-      // Skip to payment processing
       processPayment();
       return;
     }
@@ -358,17 +350,6 @@ export default function SendPreview({
       clickFeedback("medium");
       setIsLoading(true);
       
-      // Check if we should mock KYC
-      const shouldMockKyc = isMockKyc();
-      
-      if (shouldMockKyc) {
-        console.log("MOCK_KYC enabled, skipping server verification");
-        // Skip OTP and KYC verification, directly go to payment processing
-        await new Promise(resolve => setTimeout(resolve, 800)); // Small delay for better UX
-        processPayment();
-        return;
-      }
-      
       // Send OTP to the user's phone
       await sendOtpMutation.mutateAsync({ phone: phoneNumber });
       
@@ -409,23 +390,12 @@ export default function SendPreview({
     clickFeedback("medium");
 
     try {
-      // Check if we should mock KYC
-      const shouldMockKyc = isMockKyc();
-      
-      if (shouldMockKyc) {
-        console.log("MOCK_KYC enabled, skipping OTP verification");
-        // Skip verification and go straight to KYC or payment
-        setIsVerified(true);
-        initializeKycVerification();
-        return;
-      }
-      
       // In development mode, automatically accept "000000" as valid
       if (process.env.NODE_ENV === 'development' && otpCode === '000000') {
         console.log('Development mode: Auto-verifying OTP code');
         // Skip actual verification and proceed
         setIsVerified(true);
-        initializeKycVerification();
+        initializeKycVerification(); // This replaces onContinue
         return;
       }
       
@@ -479,37 +449,6 @@ export default function SendPreview({
 
   const handleSend = async () => {
     clickFeedback("medium");
-    
-    // Check if we should mock KYC
-    const shouldMockKyc = isMockKyc();
-    
-    if (shouldMockKyc) {
-      console.log("MOCK_KYC enabled, skipping verification and proceeding to payment");
-      setIsLoading(true);
-      // Generate a transfer ID
-      const mockTransferId = `transfer_${Date.now()}`;
-      setTransferId(mockTransferId);
-      
-      // Store transfer data in localStorage
-      try {
-        localStorage.setItem('currentTransfer', JSON.stringify({
-          id: mockTransferId,
-          amount,
-          recipientName,
-          phoneNumber,
-          country,
-          currency,
-          createdAt: new Date().toISOString()
-        }));
-      } catch (error) {
-        console.error("Error storing transfer in localStorage:", error);
-      }
-      
-      // Skip directly to payment processing
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay for better UX
-      processPayment();
-      return;
-    }
     
     // Start the verification process first
     await handleInitiateVerification();
