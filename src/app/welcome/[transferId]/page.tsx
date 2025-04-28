@@ -99,16 +99,6 @@ export default function Component() {
 
   const startAuthSession = async (receivedId?: number) => {
     try {
-      // In development mode, completely bypass all server calls
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Bypassing auth session server calls');
-        
-        // Redirect to next page
-        window.location.href = `/kyc/${String(transferId)}?${new URLSearchParams(searchParams).toString()}`;
-        return 999; // Mock session ID
-      }
-      
-      // Production code - make actual server calls
       const userId = user?.id ? Number(user?.id) : receivedId;
       if (!userId) {
         throw new Error("Invalid user id");
@@ -183,23 +173,6 @@ export default function Component() {
     try {
       e.preventDefault();
 
-      // In development mode, bypass server calls
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Bypassing OTP sending server call');
-        
-        // Auto-fill with default demo OTP code
-        setOtp(["0", "0", "0", "0", "0", "0"]);
-        console.log("Auto-filled with default demo OTP: 000000");
-        
-        setAttempt((prev) => prev + 1);
-        clickFeedback("success");
-        toast.success("Verification code sent to your phone");
-        setIsLoading(false);
-        setStep(2);
-        setResendTimer(59); // Set initial resend timer
-        return;
-      }
-
       if (isReceiver) {
         setIsLoading(true);
         if (!transfer.data?.recipientPhone) {
@@ -257,42 +230,7 @@ export default function Component() {
       e.preventDefault();
       if (otp.join("").length === 6) {
         setIsLoading(true);
-        
-        // In development mode, completely bypass the server call
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Development mode: Bypassing OTP verification server call');
-          
-          // Create a mock user response if we don't have one
-          const mockUser = user || {
-            id: 999,
-            phone: isReceiver ? String(transfer.data?.recipientPhone) : phoneNumber,
-            email: null,
-            firstName: null,
-            lastName: null,
-            middleName: null,
-            assignedGAddress: null,
-            passkeyCAddress: null,
-            passkeyKey: null,
-            hashedPin: null,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          
-          setUser(mockUser);
-          clickFeedback("success");
-          toast.success("Phone number verified successfully");
-          setIsLoading(false);
-          
-          if (USE_PASSKEY || searchParams.get("passkey") === "true") {
-            setStep(3);
-          } else {
-            console.log("mockUser", mockUser);
-            return startAuthSession(mockUser.id);
-          }
-          return;
-        }
-        
-        // Regular verification through tRPC mutation (only for production)
+        // Simulate API call
         const userRes = await verifyOtp.mutateAsync({
           phone: isReceiver
             ? String(transfer.data?.recipientPhone)
@@ -327,20 +265,6 @@ export default function Component() {
     try {
       setAttempt((prev) => prev + 1);
       setIsLoading(true);
-      
-      // In development mode, bypass server call
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: Bypassing OTP resend server call');
-        setIsLoading(false);
-        setResendTimer(59); // Reset resend timer
-        
-        // Auto-fill with default demo OTP code
-        setOtp(["0", "0", "0", "0", "0", "0"]);
-        console.log("Auto-filled with default demo OTP on resend: 000000");
-        toast.success("New verification code sent");
-        return;
-      }
-      
       await newOtp.mutateAsync({ phone: phoneNumber });
       setIsLoading(false);
       setResendTimer(59); // Reset resend timer
