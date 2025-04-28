@@ -129,16 +129,18 @@ export const postRouter = createTRPCRouter({
         if (!user) {
           throw new Error("User not found. Please request a new verification code.");
         }
-        
-        // Always allow "000000" as a valid OTP in development mode when SMS is disabled
+
+        // Check if we're in development mode with SMS disabled
         const isDev = process.env.NODE_ENV === 'development';
         const isSmsEnabled = String(env.ENABLE_SMS) === "true";
-        if (input.otp === "000000" && isDev && !isSmsEnabled) {
-          console.log("DEV MODE (SMS disabled): Accepting default OTP code 000000");
+        
+        // In development mode with SMS disabled, bypass verification entirely
+        if (isDev && !isSmsEnabled) {
+          console.log("DEV MODE (SMS disabled): Bypassing OTP verification");
           return user;
         }
         
-        // Find verification record
+        // For production or when SMS is enabled, perform actual verification
         const verification = await ctx.db.oTPVerification.findFirst({
           where: {
             userId: user.id,
