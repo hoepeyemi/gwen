@@ -338,7 +338,7 @@ Gwen's investment platform provides users with a range of investment options acr
 1. **Savings**
    - Flexible Savings (2.5% APY, Low Risk)
    - Fixed Term Deposit (4.2% APY, Low Risk)
-   - High-Yield Savings (5.8% APY, Medium Risk)
+   - High-Yield Saving (5.8% APY, Medium Risk)
 
 2. **Stocks**
    - Global ETF Portfolio (8-12% historical returns, Medium Risk)
