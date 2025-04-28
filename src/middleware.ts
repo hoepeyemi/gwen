@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
   }
   
   // For API routes and dashboard subpaths, use Civic auth middleware
-  if (path.startsWith("/api/") || path.startsWith("/dashboard/")) {
+  if (path.startsWith("/api/") || (path.startsWith("/dashboard/") && path !== "/dashboard")) {
     // Use the Civic auth middleware
     return authMiddleware()(request);
   }

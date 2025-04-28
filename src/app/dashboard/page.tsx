@@ -168,7 +168,7 @@ function DashboardContent() {
   const handleReceive = () => {
     if (walletAddress) {
       router.push(`/wallet/${walletAddress}/receive`);
-    } else {
+              } else {
       router.push("/receive");
     }
   };
@@ -196,7 +196,7 @@ function DashboardContent() {
   const handleInvestments = () => {
     if (walletAddress) {
       router.push(`/dashboard/${walletAddress}/investments`);
-    } else {
+            } else {
       toast.error("No wallet address found");
     }
   };
@@ -267,7 +267,7 @@ function DashboardContent() {
             Sign Out
           </Button>
         </div>
-      </div>
+        </div>
 
       {/* User Profile Card */}
       <Card className="mb-4 overflow-hidden bg-blue-600 text-white">
@@ -389,7 +389,7 @@ function DashboardContent() {
             </div>
           </CardContent>
         </Card>
-      </div>
+            </div>
 
       <Tabs defaultValue="transactions">
         <TabsList className="grid w-full grid-cols-2">
