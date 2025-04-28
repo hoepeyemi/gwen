@@ -320,7 +320,7 @@ function DashboardContent() {
               disabled={!walletAddress}
               onClick={() => {
                 if (walletAddress) {
-                  router.push(`/dashboard/${walletAddress}/send`);
+                  router.push(`/wallet/${walletAddress}/send`);
                 } else {
                   toast.error("Please wait while we set up your wallet address");
                 }
