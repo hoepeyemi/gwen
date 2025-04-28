@@ -232,10 +232,21 @@ export default function SendPreview({
     } else {
       setIsLoading(true);
       try {
+        // Skip server communication completely in development mode
+        // or when MOCK_KYC is explicitly set to false
+        const isDev = process.env.NODE_ENV === 'development';
+        const mockKyc = process.env.MOCK_KYC === 'false';
+        
+        if (isDev || mockKyc) {
+          console.log("Development mode or MOCK_KYC is false: Skipping KYC server communication");
+          // Skip to payment processing directly
+          processPayment();
+          return;
+        }
+        
         const { photo_id_front, photo_id_back, ...stringFields } = kycFormData;
         
         // Check if we're in development mode for easier testing
-        const isDev = process.env.NODE_ENV === 'development';
         
         let sep12Id;
         try {
