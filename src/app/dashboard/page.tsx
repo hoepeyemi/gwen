@@ -173,13 +173,13 @@ function DashboardContent() {
     }
   };
 
-  const handleSend = () => {
-    if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/send`);
-    } else {
-      toast.error("No wallet address found");
-    }
-  };
+  // const handleSend = () => {
+  //   if (walletAddress) {
+  //     router.push(`/dashboard/${walletAddress}/send`);
+  //   } else {
+  //     toast.error("No wallet address found");
+  //   }
+  // };
 
   const handlePayBills = () => {
     if (walletAddress) {
@@ -317,8 +317,14 @@ function DashboardContent() {
             <Button 
               variant="outline" 
               className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
-              onClick={handleSend}
               disabled={!walletAddress}
+              onClick={() => {
+                if (walletAddress) {
+                  router.push(`/dashboard/${walletAddress}/send`);
+                } else {
+                  toast.error("Please wait while we set up your wallet address");
+                }
+              }}
             >
               <ArrowUpRight className="mr-2 h-4 w-4" />
               Send
@@ -342,7 +348,13 @@ function DashboardContent() {
       </Card>
 
       <div className="grid gap-4 mb-6">
-        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handleSend}>
+        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={() => {
+          if (walletAddress) {
+            router.push(`/dashboard/${walletAddress}/send`);
+          } else {
+            toast.error("No wallet address found");
+          }
+        }}>
           <CardContent className="flex items-center space-x-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
               <ArrowUpRight className="h-6 w-6 text-blue-600" />
