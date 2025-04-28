@@ -50,6 +50,7 @@ export const env = createEnv({
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
     NEXT_PUBLIC_PUSHER_APP_KEY: z.string().optional(),
     NEXT_PUBLIC_CIVIC_CLIENT_ID: z.string().optional(),
+    NEXT_PUBLIC_MOCK_KYC: z.string().optional().default("false"),
   },
 
   /**
@@ -87,6 +88,7 @@ export const env = createEnv({
     MOCK_KYC: process.env.MOCK_KYC,
     NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY,
     NEXT_PUBLIC_CIVIC_CLIENT_ID: process.env.NEXT_PUBLIC_CIVIC_CLIENT_ID,
+    NEXT_PUBLIC_MOCK_KYC: process.env.NEXT_PUBLIC_MOCK_KYC || process.env.MOCK_KYC,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
