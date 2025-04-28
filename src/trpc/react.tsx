@@ -58,6 +58,9 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           fetch: async (url, options) => {
             try {
               const response = await fetch(url, options);
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
               return response;
             } catch (err) {
               console.error('TRPC fetch error:', err);
@@ -90,7 +93,21 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
 }
 
 function getBaseUrl() {
-  if (typeof window !== "undefined") return window.location.origin;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return `http://localhost:${process.env.PORT ?? 3000}`;
+  if (typeof window !== "undefined") {
+    // In the browser, we should use the current origin
+    return window.location.origin;
+  }
+  
+  // In production, use the Vercel URL
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  
+  // In development, use localhost
+  if (process.env.NODE_ENV === "development") {
+    return `http://localhost:${process.env.PORT ?? 3000}`;
+  }
+  
+  // Fallback for other environments
+  return "https://gwen-kohl.vercel.app";
 }

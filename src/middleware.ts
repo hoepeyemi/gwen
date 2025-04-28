@@ -14,7 +14,12 @@ export function middleware(request: NextRequest) {
   
   // For API routes and dashboard subpaths, use Civic auth middleware
   if (path.startsWith("/api/") || (path.startsWith("/dashboard/") && path !== "/dashboard")) {
-    // Use the Civic auth middleware
+    // Check if it's a tRPC request
+    if (path.startsWith("/api/trpc/")) {
+      return NextResponse.next();
+    }
+    
+    // Use the Civic auth middleware for other API routes
     return authMiddleware()(request);
   }
   
