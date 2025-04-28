@@ -13,7 +13,8 @@ import {
   Upload, 
   ArrowRight, 
   ChevronLeft,
-  AlertCircle 
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { toast } from "react-hot-toast";
@@ -157,9 +158,6 @@ export default function SendPreview({
   
   // Initialize KYC verification process
   const initializeKycVerification = () => {
-    // Check if MOCK_KYC is enabled
-    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
-    
     // Check if we have a valid transfer in local storage or generate a mock one
     let storedTransferId = null;
     try {
@@ -192,15 +190,6 @@ export default function SendPreview({
     }
     
     setTransferId(newTransferId);
-    
-    // If MOCK_KYC is enabled, skip KYC verification and go straight to payment processing
-    if (mockKycEnabled) {
-      console.log("MOCK_KYC enabled, skipping KYC verification");
-      processPayment();
-      return;
-    }
-    
-    // Otherwise, show the KYC verification form
     setShowKycVerification(true);
     setShowOtpVerification(false);
     setIsLoading(false);
@@ -223,15 +212,6 @@ export default function SendPreview({
     clickFeedback();
     setKycError("");
 
-    // Check if MOCK_KYC is enabled
-    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
-    
-    if (mockKycEnabled) {
-      console.log("MOCK_KYC enabled, skipping KYC verification");
-      processPayment();
-      return;
-    }
-
     if (kycStep === 0) {
       if (
         !kycFormData.first_name ||
@@ -253,10 +233,19 @@ export default function SendPreview({
     } else {
       setIsLoading(true);
       try {
-        const { photo_id_front, photo_id_back, ...stringFields } = kycFormData;
+        // Check if we should use mock mode (either due to env var or dev mode)
+        const isMockKyc = process.env.MOCK_KYC === 'true' || process.env.NODE_ENV === 'development';
         
-        // Check if we're in development mode for easier testing
-        const isDev = process.env.NODE_ENV === 'development';
+        if (isMockKyc) {
+          console.log("MOCK_KYC is true, skipping server communication");
+          // Wait a bit to simulate processing
+          await new Promise(resolve => setTimeout(resolve, 800));
+          // Skip all API calls and proceed directly to payment processing
+          processPayment();
+          return;
+        }
+        
+        const { photo_id_front, photo_id_back, ...stringFields } = kycFormData;
         
         let sep12Id;
         try {
@@ -277,7 +266,7 @@ export default function SendPreview({
           sep12Id = `mock-sep12-${Date.now()}`;
           
           // If this isn't a "Transfer not found" error and we're in production, show an error
-          if (!isDev && !(error instanceof Error && error.message.includes("Transfer not found"))) {
+          if (!isMockKyc && !(error instanceof Error && error.message.includes("Transfer not found"))) {
             setKycError("Could not verify your identity. Please try again later.");
             setIsLoading(false);
             return;
@@ -324,9 +313,14 @@ export default function SendPreview({
             console.error("Failed to upload ID documents:", error);
             
             // Only show error in production if upload fails
-            if (!isDev) {
+            if (!isMockKyc) {
               setKycError("Could not upload your documents. Please try again later.");
               setIsLoading(false);
+              return;
+            } else {
+              console.log("MOCK_KYC is true, ignoring document upload error");
+              // Continue to payment processing despite the error
+              processPayment();
               return;
             }
           }
@@ -390,12 +384,16 @@ export default function SendPreview({
     clickFeedback("medium");
 
     try {
-      // In development mode, automatically accept "000000" as valid
-      if (process.env.NODE_ENV === 'development' && otpCode === '000000') {
-        console.log('Development mode: Auto-verifying OTP code');
-        // Skip actual verification and proceed
+      // Check if we should use mock mode (either in development or MOCK_KYC is true)
+      const isMockKyc = process.env.MOCK_KYC === 'true' || process.env.NODE_ENV === 'development';
+      
+      // If in mock mode or development, skip actual verification and proceed
+      if (isMockKyc) {
+        console.log('Mock mode: Skipping OTP verification');
+        // Wait a moment to simulate verification
+        await new Promise(resolve => setTimeout(resolve, 800));
         setIsVerified(true);
-        initializeKycVerification(); // This replaces onContinue
+        initializeKycVerification();
         return;
       }
       
@@ -502,15 +500,31 @@ export default function SendPreview({
   }
   
   if (showKycVerification) {
+    // Check if we're in mock mode (either in development or MOCK_KYC is true)
+    const isMockKyc = process.env.MOCK_KYC === 'true' || process.env.NODE_ENV === 'development';
+    
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-light-blue p-4">
         <Card className="w-full max-w-md animate-slide-in">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold text-blue-600">
-              Account Verification
-            </CardTitle>
+            <div className="flex items-center justify-center mb-2">
+              <CardTitle className="text-2xl font-bold text-blue-600">
+                Account Verification
+              </CardTitle>
+              {isMockKyc && (
+                <div className="ml-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  MOCK MODE
+                </div>
+              )}
+            </div>
             <CardDescription>
-              We need to validate your identity to complete the transfer.
+              {isMockKyc ? (
+                <span className="text-amber-700 font-medium">
+                  Demo mode: Verification will be automatic
+                </span>
+              ) : (
+                "We need to validate your identity to complete the transfer."
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -626,6 +640,16 @@ export default function SendPreview({
                   <AlertDescription>{kycError}</AlertDescription>
                 </Alert>
               )}
+              
+              {isMockKyc && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">Mock Mode Enabled</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    KYC verification will be automatically approved without server communication.
+                  </AlertDescription>
+                </Alert>
+              )}
             </form>
           </CardContent>
           <CardFooter className="flex flex-col">
@@ -666,6 +690,9 @@ export default function SendPreview({
   }
   
   if (showOtpVerification) {
+    // Check if we're in mock mode (either in development or MOCK_KYC is true)
+    const isMockKyc = process.env.MOCK_KYC === 'true' || process.env.NODE_ENV === 'development';
+    
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-light-blue p-4">
         <Card className="w-full max-w-md animate-slide-in">
@@ -679,16 +706,25 @@ export default function SendPreview({
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <CardTitle className="text-2xl font-bold text-blue-600">
-                Verify Phone
-              </CardTitle>
+              <div className="flex items-center">
+                <CardTitle className="text-2xl font-bold text-blue-600">
+                  Verify Phone
+                </CardTitle>
+                {isMockKyc && (
+                  <div className="ml-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    MOCK MODE
+                  </div>
+                )}
+              </div>
             </div>
             <CardDescription className="text-gray-600">
-              We've sent a verification code to {phoneNumber}. Please enter it below to confirm your transfer.
-              {process.env.NODE_ENV === 'development' && (
-                <span className="block mt-2 text-blue-600 font-medium">
-                  Development mode: Use "000000" as the verification code.
+              {isMockKyc ? (
+                <span className="text-amber-700">
+                  Demo mode: Verification will be automatic with any 6-digit code. 
+                  <strong className="block mt-1">Try entering 000000</strong>
                 </span>
+              ) : (
+                `We've sent a verification code to ${phoneNumber}. Please enter it below to confirm your transfer.`
               )}
             </CardDescription>
           </CardHeader>
@@ -698,9 +734,9 @@ export default function SendPreview({
                 <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center">
                   <ShieldCheck className="h-10 w-10 text-blue-600" />
                 </div>
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="absolute top-[-10px] right-[-10px] bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    DEV MODE
+                {isMockKyc && (
+                  <div className="absolute top-[-10px] right-[-10px] bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    DEMO MODE
                   </div>
                 )}
               </div>
@@ -713,7 +749,7 @@ export default function SendPreview({
                   id="otpCode"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder={process.env.NODE_ENV === 'development' ? "000000" : "Enter 6-digit code"}
+                  placeholder={isMockKyc ? "000000" : "Enter 6-digit code"}
                   maxLength={6}
                   className="h-12 text-center text-lg tracking-widest"
                 />
@@ -723,14 +759,14 @@ export default function SendPreview({
                 <Button 
                   variant="link" 
                   onClick={handleResendOtp}
-                  disabled={isResendingOtp}
+                  disabled={isResendingOtp || isMockKyc}
                   className="text-blue-600"
                 >
                   {isResendingOtp ? "Sending..." : "Resend Code"}
                 </Button>
               </div>
               
-              {process.env.NODE_ENV === 'development' && (
+              {isMockKyc && (
                 <div className="flex justify-center">
                   <Button 
                     variant="outline" 
@@ -740,6 +776,16 @@ export default function SendPreview({
                     Auto-fill Test Code
                   </Button>
                 </div>
+              )}
+              
+              {isMockKyc && (
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertTitle className="text-amber-800">Mock Mode Enabled</AlertTitle>
+                  <AlertDescription className="text-amber-700">
+                    OTP verification will be automatically approved without server communication.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
 

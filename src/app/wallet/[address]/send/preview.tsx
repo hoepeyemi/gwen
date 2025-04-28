@@ -157,9 +157,6 @@ export default function SendPreview({
   
   // Initialize KYC verification process
   const initializeKycVerification = () => {
-    // Check if MOCK_KYC is enabled
-    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
-    
     // Check if we have a valid transfer in local storage or generate a mock one
     let storedTransferId = null;
     try {
@@ -192,15 +189,6 @@ export default function SendPreview({
     }
     
     setTransferId(newTransferId);
-    
-    // If MOCK_KYC is enabled, skip KYC verification and go straight to payment processing
-    if (mockKycEnabled) {
-      console.log("MOCK_KYC enabled, skipping KYC verification");
-      processPayment();
-      return;
-    }
-    
-    // Otherwise, show the KYC verification form
     setShowKycVerification(true);
     setShowOtpVerification(false);
     setIsLoading(false);
@@ -222,15 +210,6 @@ export default function SendPreview({
     e.preventDefault();
     clickFeedback();
     setKycError("");
-
-    // Check if MOCK_KYC is enabled
-    const mockKycEnabled = process.env.NEXT_PUBLIC_MOCK_KYC === 'true';
-    
-    if (mockKycEnabled) {
-      console.log("MOCK_KYC enabled, skipping KYC verification");
-      processPayment();
-      return;
-    }
 
     if (kycStep === 0) {
       if (
