@@ -74,7 +74,7 @@ export const postRouter = createTRPCRouter({
         
         // Try to send SMS, but handle errors gracefully
         try {
-          await sendSms(input.phone, `Your Gwen app OTP is: ${otp}`);
+          await sendSms(input.phone, `Your payu OTP is: ${otp}`);
         } catch (error) {
           console.error("Failed to send SMS:", error);
           // In development, continue even if SMS fails
@@ -129,10 +129,10 @@ export const postRouter = createTRPCRouter({
           throw new Error("User not found. Please request a new verification code.");
         }
         
-        // Always allow "000000" as a valid OTP for testing in any environment
-        // This is useful for demos and testing on Vercel
-        if (input.otp === "000000") {
-          console.log("DEMO MODE: Accepting default OTP code 000000");
+        // In development, always allow "000000" as a valid OTP for testing
+        const isDev = process.env.NODE_ENV === 'development';
+        if (isDev && input.otp === "000000") {
+          console.log("DEV MODE: Accepting test OTP code");
           return user;
         }
         
@@ -149,12 +149,6 @@ export const postRouter = createTRPCRouter({
         });
         
         if (!verification) {
-          console.error("OTP verification failed:", { 
-            userId: user.id,
-            inputOtp: input.otp,
-            phone: input.phone,
-            timestamp: new Date().toISOString()
-          });
           throw new Error("Invalid or expired verification code");
         }
         
