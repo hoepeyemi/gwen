@@ -233,7 +233,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           
           console.log("⭐ Full Civic User Context:", JSON.stringify(context, null, 2));
           console.log("⭐ User Object:", JSON.stringify(context.user, null, 2));
-          
+            
           // Extract Solana wallet address if available
           let solanaAddress = null;
           
@@ -255,7 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 JSON.parse(localStorage.getItem("auth_user") || "{}") : {};
               
               const updatedUser = { 
-                ...user,
+                ...user, 
                 ...existingUserData,
                 walletAddress: solanaAddress,
                 // Make sure we capture the profile picture

@@ -53,9 +53,10 @@ export const postRouter = createTRPCRouter({
     .input(z.object({ phone: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        // Generate OTP code - use a fixed code in development for easier testing
+        // Always use "000000" in development mode when SMS is disabled
         const isDev = process.env.NODE_ENV === 'development';
-        const otp = isDev ? "000000" : Math.floor(100000 + Math.random() * 900000).toString();
+        const isSmsEnabled = String(env.ENABLE_SMS) === "true";
+        const otp = (isDev && !isSmsEnabled) ? "000000" : Math.floor(100000 + Math.random() * 900000).toString();
         
         // Find or create user
         let user = await ctx.db.user.findUnique({
@@ -74,7 +75,7 @@ export const postRouter = createTRPCRouter({
         
         // Try to send SMS, but handle errors gracefully
         try {
-          await sendSms(input.phone, `Your payu OTP is: ${otp}`);
+          await sendSms(input.phone, `Your Gwen app OTP is: ${otp}`);
         } catch (error) {
           console.error("Failed to send SMS:", error);
           // In development, continue even if SMS fails
@@ -129,10 +130,11 @@ export const postRouter = createTRPCRouter({
           throw new Error("User not found. Please request a new verification code.");
         }
         
-        // In development, always allow "000000" as a valid OTP for testing
+        // Always allow "000000" as a valid OTP in development mode when SMS is disabled
         const isDev = process.env.NODE_ENV === 'development';
-        if (isDev && input.otp === "000000") {
-          console.log("DEV MODE: Accepting test OTP code");
+        const isSmsEnabled = String(env.ENABLE_SMS) === "true";
+        if (input.otp === "000000" && isDev && !isSmsEnabled) {
+          console.log("DEV MODE (SMS disabled): Accepting default OTP code 000000");
           return user;
         }
         
@@ -149,6 +151,12 @@ export const postRouter = createTRPCRouter({
         });
         
         if (!verification) {
+          console.error("OTP verification failed:", { 
+            userId: user.id,
+            inputOtp: input.otp,
+            phone: input.phone,
+            timestamp: new Date().toISOString()
+          });
           throw new Error("Invalid or expired verification code");
         }
         
