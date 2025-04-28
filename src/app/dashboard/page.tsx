@@ -174,12 +174,11 @@ function DashboardContent() {
   };
 
   const handleSend = () => {
-    if (!walletAddress) {
-      toast.error("You need to set up a wallet first");
-      return;
+    if (walletAddress) {
+      router.push(`/dashboard/${walletAddress}/send`);
+    } else {
+      toast.error("No wallet address found");
     }
-    
-    router.push("/send");
   };
 
   const handlePayBills = () => {
@@ -315,17 +314,6 @@ function DashboardContent() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-2">
-            <Card className="hover:bg-gray-50 transition-colors">
-              <CardContent className="flex items-center space-x-4 p-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                  <ArrowUpRight className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Send Money</h3>
-                  <p className="text-sm text-gray-500">Transfer money to other users</p>
-                </div>
-              </CardContent>
-            </Card>
             <Button 
               variant="outline" 
               className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
@@ -334,6 +322,14 @@ function DashboardContent() {
             >
               <ArrowUpRight className="mr-2 h-4 w-4" />
               Send
+            </Button>
+            <Button 
+              variant="outline" 
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+              onClick={handleReceive}
+            >
+              <ArrowDownToLine className="mr-2 h-4 w-4" />
+              Receive
             </Button>
           </div>
           
