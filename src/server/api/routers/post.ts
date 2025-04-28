@@ -119,8 +119,6 @@ export const postRouter = createTRPCRouter({
     .input(z.object({ phone: z.string(), otp: z.string() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        console.log("Verifying OTP for phone:", input.phone);
-        
         // Get user by phone
         const user = await ctx.db.user.findUnique({
           where: {
@@ -129,37 +127,15 @@ export const postRouter = createTRPCRouter({
         });
         
         if (!user) {
-          console.error("User not found for phone:", input.phone);
           throw new Error("User not found. Please request a new verification code.");
         }
         
         // Always allow "000000" as a valid OTP in development mode when SMS is disabled
         const isDev = process.env.NODE_ENV === 'development';
         const isSmsEnabled = String(env.ENABLE_SMS) === "true";
-        
-        console.log("Environment check:", { isDev, isSmsEnabled, otp: input.otp });
-        
         if (input.otp === "000000" && isDev && !isSmsEnabled) {
           console.log("DEV MODE (SMS disabled): Accepting default OTP code 000000");
-          
-          try {
-            // Update verification record to mark as verified
-            await ctx.db.oTPVerification.updateMany({
-              where: {
-                userId: user.id,
-                verified: false,
-              },
-              data: {
-                verified: true,
-              },
-            });
-            
-            console.log("Successfully updated verification record for user:", user.id);
-            return user;
-          } catch (updateError) {
-            console.error("Failed to update verification record:", updateError);
-            throw new Error("Failed to update verification status. Please try again.");
-          }
+          return user;
         }
         
         // Find verification record
@@ -175,37 +151,29 @@ export const postRouter = createTRPCRouter({
         });
         
         if (!verification) {
-          console.error("Invalid verification attempt:", { 
-            userId: user.id, 
-            otp: input.otp,
-            currentTime: new Date()
+          console.error("OTP verification failed:", { 
+            userId: user.id,
+            inputOtp: input.otp,
+            phone: input.phone,
+            timestamp: new Date().toISOString()
           });
-          throw new Error("Invalid or expired verification code. Please request a new one.");
+          throw new Error("Invalid or expired verification code");
         }
         
-        try {
-          // Mark OTP as verified
-          await ctx.db.oTPVerification.update({
-            where: {
-              id: verification.id,
-            },
-            data: {
-              verified: true,
-            },
-          });
-          
-          console.log("Successfully verified OTP for user:", user.id);
-          return user;
-        } catch (updateError) {
-          console.error("Failed to update verification record:", updateError);
-          throw new Error("Failed to update verification status. Please try again.");
-        }
+        // Mark as verified
+        await ctx.db.oTPVerification.update({
+          where: {
+            id: verification.id,
+          },
+          data: {
+            verified: true,
+          },
+        });
+        
+        return user;
       } catch (error) {
         console.error("OTP verification error:", error);
-        if (error instanceof Error) {
-          throw new Error(error.message);
-        }
-        throw new Error("An unexpected error occurred during verification.");
+        throw error;
       }
     }),
   hello: publicProcedure
