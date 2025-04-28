@@ -55,6 +55,26 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
             headers.set("x-trpc-source", "nextjs-react");
             return headers;
           },
+          fetch: async (url, options) => {
+            try {
+              const response = await fetch(url, options);
+              return response;
+            } catch (err) {
+              console.error('TRPC fetch error:', err);
+              // Return a fake response with proper JSON for critical errors
+              return new Response(JSON.stringify({
+                error: {
+                  message: "Network error occurred",
+                  code: "NETWORK_ERROR"
+                }
+              }), {
+                status: 500,
+                headers: {
+                  'content-type': 'application/json'
+                }
+              });
+            }
+          }
         }),
       ],
     })
