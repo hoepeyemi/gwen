@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -9,9 +9,6 @@ import { Label } from "~/components/ui/label";
 import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import PinEntry from "~/app/wallet/_components/pin";
-import { api } from "~/trpc/react";
-import { toast } from "react-hot-toast";
-import { useAuth } from "~/providers/auth-provider";
 
 // Add Dialog components for the PIN verification modal
 import {
@@ -29,71 +26,58 @@ interface BillType {
   description: string;
 }
 
-// Map icon strings to React components
-const iconMap = {
-  "Zap": <Zap className="h-6 w-6 text-yellow-500" />,
-  "Droplet": <Droplet className="h-6 w-6 text-blue-500" />,
-  "Wifi": <Wifi className="h-6 w-6 text-purple-500" />,
-  "Phone": <Phone className="h-6 w-6 text-green-500" />,
-  "Home": <Home className="h-6 w-6 text-orange-500" />,
-  "CreditCard": <CreditCard className="h-6 w-6 text-red-500" />
-};
+const billTypes: BillType[] = [
+  {
+    id: "electricity",
+    name: "Electricity",
+    icon: <Zap className="h-6 w-6 text-yellow-500" />,
+    description: "Pay your electricity bills",
+  },
+  {
+    id: "water",
+    name: "Water",
+    icon: <Droplet className="h-6 w-6 text-blue-500" />,
+    description: "Pay your water utility bills",
+  },
+  {
+    id: "internet",
+    name: "Internet",
+    icon: <Wifi className="h-6 w-6 text-purple-500" />,
+    description: "Pay your internet service bills",
+  },
+  {
+    id: "phone",
+    name: "Phone",
+    icon: <Phone className="h-6 w-6 text-green-500" />,
+    description: "Pay your phone bills",
+  },
+  {
+    id: "rent",
+    name: "Rent",
+    icon: <Home className="h-6 w-6 text-orange-500" />,
+    description: "Pay your rent",
+  },
+  {
+    id: "credit",
+    name: "Credit Card",
+    icon: <CreditCard className="h-6 w-6 text-red-500" />,
+    description: "Pay your credit card bills",
+  },
+];
 
 export default function BillsPage() {
   const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
-  const { user } = useAuth();
   const [selectedBill, setSelectedBill] = useState<BillType | null>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [billTypes, setBillTypes] = useState<BillType[]>([]);
-
-  // Get bill types from the API
-  const { data: apiBillTypes, isLoading: isLoadingBillTypes } = api.bills.getBillTypes.useQuery();
-
-  // Payment mutation
-  const payBillMutation = api.bills.payBill.useMutation({
-    onSuccess: (data) => {
-      // Save payment details to localStorage for the success page
-      try {
-        localStorage.setItem("lastBillPayment", JSON.stringify({
-          billTypeId: selectedBill?.id || "",
-          billTypeName: selectedBill?.name || "",
-          accountNumber: accountNumber,
-          amount: parseFloat(amount),
-          date: new Date().toISOString(),
-          paymentId: data.paymentId || `TRX${Date.now().toString().slice(-9)}`
-        }));
-      } catch (error) {
-        console.error("Error saving payment details to localStorage:", error);
-      }
-      
-      toast.success(data.message || "Bill payment successful!");
-      router.push(`/dashboard/${address}/bills/success`);
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to process payment");
-      setIsLoading(false);
-    }
-  });
-
-  useEffect(() => {
-    if (apiBillTypes) {
-      // Convert API bill types to our BillType format with proper icons
-      const formattedBillTypes = apiBillTypes.map(bill => ({
-        ...bill,
-        icon: iconMap[bill.icon as keyof typeof iconMap] || <CreditCard className="h-6 w-6 text-gray-500" />
-      }));
-      setBillTypes(formattedBillTypes);
-    }
-  }, [apiBillTypes]);
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard/${address}`);
+    router.push(`/dashboard`);
   };
 
   const handleBillSelect = (bill: BillType) => {
@@ -105,18 +89,7 @@ export default function BillsPage() {
     e.preventDefault();
     clickFeedback();
     
-    // Validate inputs
-    if (!accountNumber.trim()) {
-      toast.error("Please enter an account number");
-      return;
-    }
-
-    if (!amount || parseFloat(amount) <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-    
-    // Open PIN verification modal
+    // Instead of immediately processing payment, open PIN verification modal
     setIsPinModalOpen(true);
   };
   
@@ -125,35 +98,15 @@ export default function BillsPage() {
     setIsPinModalOpen(false);
     setIsLoading(true);
 
-    if (selectedBill) {
-      try {
-        await payBillMutation.mutateAsync({
-          billTypeId: selectedBill.id,
-          accountNumber: accountNumber,
-          amount: parseFloat(amount),
-          userId: user?.id
-        });
-      } catch (error) {
-        // Error is handled in the mutation callbacks
-        console.error("Payment error:", error);
-      }
-    }
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    router.push(`/dashboard/${address}/bills/success`);
   };
   
   const handlePinCancel = () => {
     setIsPinModalOpen(false);
   };
-
-  if (isLoadingBillTypes) {
-    return (
-      <div className="flex min-h-screen flex-col bg-gray-50 p-4">
-        <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading bill types...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (selectedBill) {
     return (

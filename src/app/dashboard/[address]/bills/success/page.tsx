@@ -1,77 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 
-interface BillPaymentDetails {
-  billTypeId: string;
-  billTypeName?: string;
-  accountNumber: string;
-  amount: number;
-  date: string;
-  paymentId: string;
-}
-
 export default function BillPaymentSuccessPage() {
   const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
-  const [paymentDetails, setPaymentDetails] = useState<BillPaymentDetails | null>(null);
 
   useEffect(() => {
-    // Provide haptic feedback on page load
-    clickFeedback("success");
-    
-    // Try to get payment details from localStorage
-    try {
-      const storedPayment = localStorage.getItem("lastBillPayment");
-      if (storedPayment) {
-        setPaymentDetails(JSON.parse(storedPayment));
-      } else {
-        // If no details found, create mock data
-        setPaymentDetails({
-          billTypeId: "electricity",
-          billTypeName: "Electricity",
-          accountNumber: "1234567890",
-          amount: 50.00,
-          date: new Date().toISOString(),
-          paymentId: `TRX${Date.now().toString().slice(-9)}`
-        });
-      }
-    } catch (error) {
-      console.error("Error retrieving payment details:", error);
-      // Fallback to mock data
-      setPaymentDetails({
-        billTypeId: "electricity",
-        billTypeName: "Electricity",
-        accountNumber: "1234567890",
-        amount: 50.00,
-        date: new Date().toISOString(),
-        paymentId: `TRX${Date.now().toString().slice(-9)}`
-      });
-    }
+    // Simulate haptic feedback on page load
+    clickFeedback();
   }, []);
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard/${address}`);
-  };
-
-  const getBillName = (billTypeId: string): string => {
-    const billTypes: Record<string, string> = {
-      "electricity": "Electricity",
-      "water": "Water",
-      "internet": "Internet",
-      "phone": "Phone",
-      "rent": "Rent",
-      "credit": "Credit Card"
-    };
-    
-    return billTypes[billTypeId] || billTypeId;
+    router.push(`/dashboard`);
   };
 
   return (
@@ -94,30 +42,25 @@ export default function BillPaymentSuccessPage() {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500">Bill Type</span>
-              <span className="font-medium">
-                {paymentDetails?.billTypeName || 
-                 (paymentDetails?.billTypeId ? getBillName(paymentDetails.billTypeId) : "Unknown")}
-              </span>
+              <span className="font-medium">Electricity</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Account Number</span>
-              <span className="font-medium">{paymentDetails?.accountNumber || "1234567890"}</span>
+              <span className="font-medium">1234567890</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Amount</span>
-              <span className="font-medium">${paymentDetails?.amount.toFixed(2) || "50.00"}</span>
+              <span className="font-medium">$50.00</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Date</span>
               <span className="font-medium">
-                {paymentDetails?.date 
-                  ? new Date(paymentDetails.date).toLocaleDateString() 
-                  : new Date().toLocaleDateString()}
+                {new Date().toLocaleDateString()}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Transaction ID</span>
-              <span className="font-medium">{paymentDetails?.paymentId || "TRX123456789"}</span>
+              <span className="font-medium">TRX123456789</span>
             </div>
           </CardContent>
         </Card>
