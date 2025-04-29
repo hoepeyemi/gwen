@@ -74,7 +74,7 @@ export default function BillsPage() {
         console.error("Error saving payment details to localStorage:", error);
       }
       
-      router.push(`/dashboard/${address}/bills/success`);
+      router.push(`/wallet/${address}/bills/success`);
     },
     onError: (error) => {
       setIsLoading(false);

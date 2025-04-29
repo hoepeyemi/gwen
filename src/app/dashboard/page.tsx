@@ -183,7 +183,7 @@ function DashboardContent() {
 
   const handlePayBills = () => {
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/bills`);
+      router.push(`/wallet/${walletAddress}/bills`);
     } else {
       toast.error("No wallet address found");
     }
