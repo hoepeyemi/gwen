@@ -350,7 +350,7 @@ function DashboardContent() {
       <div className="grid gap-4 mb-6">
         <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={() => {
           if (walletAddress) {
-            router.push(`/dashboard/${walletAddress}/send`);
+            router.push(`/wallet/${walletAddress}/send`);
           } else {
             toast.error("No wallet address found");
           }
