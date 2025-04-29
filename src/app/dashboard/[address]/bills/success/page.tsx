@@ -1,25 +1,36 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { CheckCircle2, ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/components/ui/card";
+import { CheckCircle2, ArrowLeft, Home } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 
 export default function BillPaymentSuccessPage() {
   const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
 
   useEffect(() => {
-    // Simulate haptic feedback on page load
-    clickFeedback();
+    // Provide haptic feedback on page load
+    clickFeedback("success");
+    
+    // Try to get payment details from localStorage
+    try {
+      const details = localStorage.getItem("lastBillPayment");
+      if (details) {
+        setPaymentDetails(JSON.parse(details));
+      }
+    } catch (error) {
+      console.error("Error retrieving payment details:", error);
+    }
   }, []);
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard`);
+    router.push(`/dashboard/${address}`);
   };
 
   return (
@@ -40,28 +51,34 @@ export default function BillPaymentSuccessPage() {
             <CardTitle>Transaction Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Bill Type</span>
-              <span className="font-medium">Electricity</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Account Number</span>
-              <span className="font-medium">1234567890</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Amount</span>
-              <span className="font-medium">$50.00</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Date</span>
-              <span className="font-medium">
-                {new Date().toLocaleDateString()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Transaction ID</span>
-              <span className="font-medium">TRX123456789</span>
-            </div>
+            {paymentDetails ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Bill Type</span>
+                  <span className="font-medium">{paymentDetails.billTypeName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Account Number</span>
+                  <span className="font-medium">{paymentDetails.accountNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Amount</span>
+                  <span className="font-medium">${paymentDetails.amount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Date</span>
+                  <span className="font-medium">
+                    {new Date(paymentDetails.date).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Transaction ID</span>
+                  <span className="font-medium">{paymentDetails.paymentId}</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-center text-gray-500">Your bill payment has been completed.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -69,6 +86,7 @@ export default function BillPaymentSuccessPage() {
           onClick={handleBack}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white h-12 text-base font-semibold"
         >
+          <Home className="mr-2 h-5 w-5" />
           Back to Dashboard
         </Button>
       </div>

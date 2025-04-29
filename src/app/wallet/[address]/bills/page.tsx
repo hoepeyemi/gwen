@@ -10,6 +10,7 @@ import { Loader2, ArrowLeft, Zap, Droplet, Wifi, Phone, Tv, Flame } from "lucide
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { toast } from "react-hot-toast";
 import { api } from "~/trpc/react";
+import PinEntry from "~/app/wallet/_components/pin";
 
 // Map bill icon strings to Lucide icons
 const getBillIcon = (iconName: string) => {
@@ -49,9 +50,24 @@ export default function BillsPage() {
   
   // Payment mutation
   const payBillMutation = api.bills.payBill.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsLoading(false);
       toast.success(`${selectedBill.name} bill paid successfully!`);
+      
+      // Store payment details in localStorage for the success page
+      try {
+        localStorage.setItem("lastBillPayment", JSON.stringify({
+          billTypeId: selectedBill?.id || "",
+          billTypeName: selectedBill?.name || "",
+          accountNumber: accountNumber,
+          amount: parseFloat(amount),
+          date: new Date().toISOString(),
+          paymentId: data.transactionId || `TRX${Date.now().toString().slice(-9)}`
+        }));
+      } catch (error) {
+        console.error("Error saving payment details to localStorage:", error);
+      }
+      
       // Redirect to success page
       router.push(`/wallet/${params.address}/bills/success`);
     },
@@ -63,7 +79,7 @@ export default function BillsPage() {
   
   const handleBack = () => {
     if (billStep === "select") {
-      router.back();
+      router.push(`/wallet/${params.address}`);
     } else if (billStep === "details") {
       setBillStep("select");
     } else if (billStep === "verification") {
@@ -231,33 +247,11 @@ export default function BillsPage() {
         </Card>
       )}
       
-      {/* Pin Entry would be imported from your PIN component */}
+      {/* Pin Entry modal */}
       {showPinEntry && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <Card className="w-full max-w-md p-4">
-            <CardHeader>
-              <CardTitle>Enter PIN</CardTitle>
-              <CardDescription>
-                Enter your PIN to authorize payment of ${amount} for your {selectedBill?.name} bill.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Here you would include your PIN entry component */}
-              <div className="flex justify-center space-x-2">
-                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">●</div>
-                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">●</div>
-                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">●</div>
-                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">●</div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={handlePinCancel}>
-                Cancel
-              </Button>
-              <Button onClick={handlePinSuccess}>
-                Verify
-              </Button>
-            </CardFooter>
+          <Card className="w-full max-w-md">
+            <PinEntry onSuccess={handlePinSuccess} onCancel={handlePinCancel} />
           </Card>
         </div>
       )}

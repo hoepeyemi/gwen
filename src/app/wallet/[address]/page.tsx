@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "~/providers/auth-provider";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Eye, EyeOff, ArrowDownToLine } from "lucide-react";
+import { Eye, EyeOff, ArrowDownToLine, Receipt } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { shortStellarAddress } from "~/lib/utils";
 
@@ -63,6 +63,12 @@ export default function Wallet() {
     clickFeedback("medium");
     router.push(`/wallet/${address}/receive`);
   };
+
+  const handlePayBills = () => {
+    clickFeedback("medium");
+    router.push(`/wallet/${address}/bills`);
+  };
+
   // If PIN isn't verified for viewing wallet, redirect to PIN page
   if (!isPinVerified) {
     router.push(`/auth/pin?redirectTo=/wallet/${address}`);
@@ -92,13 +98,21 @@ export default function Wallet() {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Button
           onClick={handleReceive}
           className="flex h-20 flex-col items-center justify-center space-y-1 bg-green-500 hover:bg-green-600"
         >
           <ArrowDownToLine className="h-6 w-6" />
           <span>Receive Money</span>
+        </Button>
+        
+        <Button
+          onClick={handlePayBills}
+          className="flex h-20 flex-col items-center justify-center space-y-1 bg-blue-500 hover:bg-blue-600"
+        >
+          <Receipt className="h-6 w-6" />
+          <span>Pay Bills</span>
         </Button>
       </div>
 
