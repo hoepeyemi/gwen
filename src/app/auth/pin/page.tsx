@@ -71,57 +71,12 @@ function PinAuthenticationContent() {
     if (user && user.id) {
       try {
         console.log("Refreshing user data after PIN verification");
-        const refreshedUser = await refreshUserData(user.id);
+        await refreshUserData(user.id);
         
-        // Copy over PIN if it exists in localStorage but not in refreshed user data
-        try {
-          // Get the PIN from localStorage
-          const storedPinData = localStorage.getItem("user_pin");
-          if (storedPinData) {
-            const parsedPinData = JSON.parse(storedPinData);
-            
-            // Get the refreshed user data
-            const userData = localStorage.getItem("auth_user");
-            if (userData) {
-              const parsedUserData = JSON.parse(userData);
-              
-              // Only add PIN if it doesn't exist in user data
-              if (!parsedUserData.pin && parsedPinData && parsedPinData.pin) {
-                parsedUserData.pin = parsedPinData.pin;
-                localStorage.setItem("auth_user", JSON.stringify(parsedUserData));
-                console.log("Added PIN to auth_user from direct storage");
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error syncing PIN between storages:", err);
-        }
+        // Note: User PIN is now permanently stored in the database using the AuthService
+        // No need to manage PINs in localStorage, the server will handle validation
       } catch (err) {
         console.error("Error refreshing user data:", err);
-        
-        // Fallback to local update if server refresh fails
-        try {
-          const userData = localStorage.getItem("auth_user");
-          if (userData) {
-            const localUser = JSON.parse(userData);
-            if (localUser.hashedPin === null || localUser.hashedPin === undefined) {
-              localUser.hashedPin = "PIN_VERIFIED"; // Use a string value, not a boolean
-              localStorage.setItem("auth_user", JSON.stringify(localUser));
-              console.log("Updated local user data for PIN verification");
-            }
-            
-            // Ensure wallet address is set
-            if (!localUser.walletAddress) {
-              // Generate a unique wallet address for the user
-              const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-              localUser.walletAddress = newAddress;
-              localStorage.setItem("auth_user", JSON.stringify(localUser));
-              console.log("Generated new wallet address after PIN verification:", newAddress);
-            }
-          }
-        } catch (localErr) {
-          console.error("Error updating local user data:", localErr);
-        }
       }
     }
     
