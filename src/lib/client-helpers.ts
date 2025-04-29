@@ -1,59 +1,134 @@
 import { env } from "~/env";
 
-import { PasskeyKit, PasskeyServer, SACClient } from "passkey-kit";
-import { Account, Keypair, StrKey } from "@stellar/stellar-sdk/minimal"
-import { Buffer } from "buffer";
-import { basicNodeSigner } from "@stellar/stellar-sdk/minimal/contract";
-import { Server } from "@stellar/stellar-sdk/minimal/rpc";
+// Mock implementations to replace Stellar dependencies
+export const generateMockId = () => {
+  const randomId = Math.random().toString(36).substring(2, 15);
+  return `mock-${randomId}`;
+};
 
-// Provide fallback values for environment variables
-const DEFAULT_RPC_URL = "https://soroban-testnet.stellar.org";
-const DEFAULT_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-const DEFAULT_FACTORY_CONTRACT_ID = ""; // Empty fallback
-const DEFAULT_NATIVE_CONTRACT_ID = ""; // Empty fallback
+export const generateMockAddress = () => {
+  const randomAddress = Math.random().toString(36).substring(2, 15);
+  return `addr-${randomAddress}`;
+};
 
-export const rpc = new Server(env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL);
+// Generate a mock public key for display purposes
+export const generateMockPublicKey = () => {
+  return `pub-${Math.random().toString(36).substring(2, 15)}`;
+};
 
-export const mockPubkey = StrKey.encodeEd25519PublicKey(Buffer.alloc(32))
-export const mockSource = new Account(mockPubkey, '0')
+// Mock functions for funding accounts
+export const fundPubkey = async (publicKey: string) => {
+  console.log(`Mocking fund operation for public key: ${publicKey}`);
+  return {
+    success: true,
+    transactionId: generateMockId()
+  };
+};
 
-export const fundKeypair = new Promise<Keypair>(async (resolve) => {
-    const now = new Date();
+export const fundSigner = async (signerKey: string) => {
+  console.log(`Mocking fund operation for signer key: ${signerKey}`);
+  return {
+    success: true,
+    transactionId: generateMockId()
+  };
+};
 
-    now.setMinutes(0, 0, 0);
+// Mock class to replace PasskeyKit
+export const mockPasskeyKit = {
+  createPasskey: async (username: string) => {
+    console.log(`Creating passkey for ${username}`);
+    return generateMockId();
+  },
+  
+  getPasskeys: async () => {
+    return [{
+      id: generateMockId(),
+      name: "Mock Passkey",
+      created: new Date().toISOString()
+    }];
+  },
 
-    const nowData = new TextEncoder().encode(now.getTime().toString());
-    const hashBuffer = await crypto.subtle.digest('SHA-256', nowData);
-    const keypair = Keypair.fromRawEd25519Seed(Buffer.from(hashBuffer))
-    const publicKey = keypair.publicKey()
+  // Additional methods needed by usePasskey hook
+  createWallet: async (user: string, identifier: string) => {
+    console.log(`Creating wallet for ${user} with identifier ${identifier}`);
+    const keyId = generateMockId();
+    const contractId = generateMockId();
+    return {
+      keyId,
+      keyIdBase64: Buffer.from(keyId).toString('base64'),
+      contractId,
+      signedTx: "mockedSignedTransaction"
+    };
+  },
 
-    rpc.getAccount(publicKey)
-        .catch(() => rpc.requestAirdrop(publicKey))
-        .catch(() => { })
+  connectWallet: async () => {
+    console.log("Connecting to wallet with passkey");
+    const keyId = generateMockId();
+    const contractId = generateMockId();
+    return {
+      keyIdBase64: Buffer.from(keyId).toString('base64'),
+      contractId
+    };
+  },
 
-    resolve(keypair)
-})
-export const fundPubkey = (await fundKeypair).publicKey()
-export const fundSigner = basicNodeSigner(await fundKeypair, env.NEXT_PUBLIC_NETWORK_PASSPHRASE || DEFAULT_NETWORK_PASSPHRASE)
+  sign: async (xdr: string, options: { keyId: string }) => {
+    console.log(`Signing transaction with key ${options.keyId}`);
+    return {
+      toXDR: () => "mockedSignedXDR"
+    };
+  },
 
-export const account = new PasskeyKit({
-    rpcUrl: env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL,
-    networkPassphrase: env.NEXT_PUBLIC_NETWORK_PASSPHRASE || DEFAULT_NETWORK_PASSPHRASE,
-    walletWasmHash: env.NEXT_PUBLIC_FACTORY_CONTRACT_ID || DEFAULT_FACTORY_CONTRACT_ID,
-});
+  createKey: async (user: string, name: string) => {
+    console.log(`Creating key for ${user} with name ${name}`);
+    return {
+      keyId: generateMockId(),
+      publicKey: generateMockPublicKey()
+    };
+  },
 
-// Server-side only component
-// This should only be imported from server-side code
-export const server = new PasskeyServer({
-    rpcUrl: env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL,
-    launchtubeUrl: "https://testnet.launchtube.xyz", // Hardcoded for client
-    launchtubeJwt: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI4N2QyYmQ0ZGM0N2NhNDMxNTdkMmIxZTA5YWJhMDEyMjIzNTk4YzAzYzgxMjJjYjZmMTBlZDE2ZDY1Y2YzMTlmIiwiZXhwIjoxNzUwNDEyNzYwLCJjcmVkaXRzIjoxMDAwMDAwMDAwLCJpYXQiOjE3NDMxNTUxNjB9.Jrk_thIbYjBerDV6A8q3ikjBnG3e-PwD1HNG39DgPX8",                // Hardcoded for client
-    mercuryUrl: "https://api.mercurydata.app",       // Hardcoded for client
-    mercuryJwt: "JWT-placeholder",                   // Hardcoded for client
-});
+  addSecp256r1: async (keyId: string, publicKey: string, limits?: any, store?: any) => {
+    console.log(`Adding secp256r1 key ${keyId} with public key ${publicKey}`);
+    return {
+      built: "mockedTransaction"
+    };
+  }
+};
 
-export const sac = new SACClient({
-    rpcUrl: env.NEXT_PUBLIC_RPC_URL || DEFAULT_RPC_URL,
-    networkPassphrase: env.NEXT_PUBLIC_NETWORK_PASSPHRASE || DEFAULT_NETWORK_PASSPHRASE,
-});
-export const native = sac.getSACClient(env.NEXT_PUBLIC_NATIVE_CONTRACT_ID || DEFAULT_NATIVE_CONTRACT_ID)
+// Exports to maintain API compatibility with existing code
+export const account = mockPasskeyKit;
+
+// Mock server object
+export const server = {
+  generateId: generateMockId,
+  generateAddress: generateMockAddress,
+  send: async (tx: string) => {
+    console.log(`Sending transaction: ${tx}`);
+    return {
+      success: true,
+      txId: generateMockId()
+    };
+  },
+  getSigners: async (contractId: string) => {
+    console.log(`Getting signers for contract ${contractId}`);
+    return [
+      {
+        id: generateMockId(),
+        name: "Mock Signer 1",
+        type: "secp256r1",
+        created: new Date().toISOString()
+      }
+    ];
+  }
+};
+
+// Mock native client
+export const native = {
+  getBalance: async () => ({ balance: 1000 }),
+  transfer: async () => ({ success: true, txId: generateMockId() }),
+  balance: async ({ id }: { id: string }) => {
+    console.log(`Getting balance for ${id}`);
+    return {
+      result: 1000
+    };
+  }
+};

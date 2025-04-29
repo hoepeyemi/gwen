@@ -20,7 +20,7 @@ interface TransferData {
   recipientName?: string;
   phoneNumber?: string;
   country?: string;
-  currency?: string;
+  currency?: string | { code: string };
   createdAt?: string;
 }
 
@@ -66,8 +66,8 @@ const ConfirmComponent: React.FC = () => {
         phoneNumber: transfer.data.recipientPhone,
         // Handle case where currency might be a string or an object with code property
         currency: typeof transfer.data.currency === 'object' && transfer.data.currency !== null
-          ? (transfer.data.currency as { code: string }).code
-          : transfer.data.currency,
+          ? { code: (transfer.data.currency as any).code || "USD" }
+          : transfer.data.currency || "USD",
       });
     }
   }, [transfer.data]);

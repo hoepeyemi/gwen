@@ -141,19 +141,19 @@ export default function SendPreview({
   });
   
   // KYC mutations
-  const putKyc = api.stellar.kyc.useMutation({
-    onError: (error) => {
-      console.error("KYC submission error:", error);
-      // Don't show error to the user yet, as we'll handle it in the try/catch
-    }
-  });
+  const mockKycSubmission = (data: any) => {
+    console.log("Mock KYC submission:", data);
+    return Promise.resolve(`mock-kyc-${Date.now()}`);
+  };
   
-  const kycFileConfig = api.stellar.kycFileConfig.useMutation({
-    onError: (error) => {
-      console.error("KYC file config error:", error);
-      // Don't show error to the user yet, as we'll handle it in the try/catch
-    }
-  });
+  const mockFileConfigRequest = (data: any) => {
+    console.log("Mock file config request:", data);
+    return Promise.resolve({
+      url: "/api/mock-file-upload",
+      config: { headers: { "Content-Type": "multipart/form-data" } },
+      mockUpload: true
+    });
+  };
   
   // Initialize KYC verification process
   const initializeKycVerification = () => {
@@ -245,11 +245,7 @@ export default function SendPreview({
           }
           
           // Submit basic KYC info
-          sep12Id = await putKyc.mutateAsync({
-            type: "sender",
-            transferId: transferId,
-            fields: stringFields,
-          });
+          sep12Id = await mockKycSubmission(stringFields);
         } catch (error) {
           console.error("Failed to submit KYC info:", error);
           // In all environments, provide a fallback option
@@ -268,10 +264,7 @@ export default function SendPreview({
           // Only try to get file upload config if we have a valid transferId
           if (transferId) {
             // Get file upload config
-            fileUploadConfig = await kycFileConfig.mutateAsync({
-              type: "sender",
-              transferId: transferId,
-            });
+            fileUploadConfig = await mockFileConfigRequest(stringFields);
           } else {
             throw new Error("Missing transferId");
           }

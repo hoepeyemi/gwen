@@ -7,7 +7,7 @@ import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Eye, EyeOff, ArrowDownToLine, Receipt } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
-import { shortStellarAddress } from "~/lib/utils";
+import { shortenAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -93,7 +93,7 @@ export default function Wallet() {
           </button>
         </div>
         <p className="mt-1 text-xs text-gray-400">
-          {user && user.email ? `Connected with ${user.email}` : `Wallet ID: ${address ? shortStellarAddress(String(address)) : ""}`}
+          {user && user.email ? `Connected with ${user.email}` : `Wallet ID: ${address ? shortenAddress(String(address)) : ""}`}
         </p>
       </div>
 

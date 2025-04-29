@@ -12,7 +12,7 @@ export default function BillPaymentSuccessPage() {
   const params = useParams();
   const { clickFeedback } = useHapticFeedback();
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
-  
+
   useEffect(() => {
     // Try to get payment details from localStorage
     try {
@@ -24,12 +24,12 @@ export default function BillPaymentSuccessPage() {
       console.error("Error retrieving payment details:", error);
     }
   }, []);
-  
+
   const handleBack = () => {
     clickFeedback();
     router.push(`/wallet/${params.address}`);
   };
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-gradient-light-blue">
       <Card className="w-full max-w-md animate-slide-in">
@@ -43,31 +43,31 @@ export default function BillPaymentSuccessPage() {
           <CardDescription className="text-lg">
             Your bill payment has been processed successfully.
           </CardDescription>
-        </CardHeader>
+          </CardHeader>
         
-        <CardContent className="space-y-4">
+          <CardContent className="space-y-4">
           {paymentDetails ? (
             <div className="rounded-lg border border-gray-200 p-4">
               <div className="space-y-2">
-                <div className="flex justify-between">
+            <div className="flex justify-between">
                   <span className="text-gray-600">Bill Type:</span>
                   <span className="font-semibold">{paymentDetails.billTypeName}</span>
-                </div>
-                <div className="flex justify-between">
+            </div>
+            <div className="flex justify-between">
                   <span className="text-gray-600">Account:</span>
                   <span className="font-semibold">{paymentDetails.accountNumber}</span>
-                </div>
-                <div className="flex justify-between">
+            </div>
+            <div className="flex justify-between">
                   <span className="text-gray-600">Amount:</span>
                   <span className="font-semibold">${paymentDetails.amount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
+            </div>
+            <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>
                   <span className="font-semibold">
                     {new Date(paymentDetails.date).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
+              </span>
+            </div>
+            <div className="flex justify-between">
                   <span className="text-gray-600">Payment ID:</span>
                   <span className="font-semibold">{paymentDetails.paymentId}</span>
                 </div>
@@ -78,16 +78,16 @@ export default function BillPaymentSuccessPage() {
               <p>Your bill payment has been completed.</p>
             </div>
           )}
-        </CardContent>
-        
+          </CardContent>
+
         <CardFooter>
-          <Button
-            onClick={handleBack}
+        <Button
+          onClick={handleBack}
             className="w-full"
-          >
+        >
             <Home className="mr-2 h-4 w-4" />
             Return to Wallet
-          </Button>
+        </Button>
         </CardFooter>
       </Card>
     </div>

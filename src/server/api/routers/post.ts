@@ -72,7 +72,7 @@ export const postRouter = createTRPCRouter({
         // Try to send SMS, but handle errors gracefully
         try {
           if (isSmsEnabled) {
-            await sendSms(input.phone, `Your Gwen app OTP is: ${otp}`);
+          await sendSms(input.phone, `Your Gwen app OTP is: ${otp}`);
           } else {
             console.log(`SMS DISABLED. OTP for ${input.phone} would be: ${otp}`);
           }

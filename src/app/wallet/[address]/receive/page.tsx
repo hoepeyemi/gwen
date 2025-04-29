@@ -13,7 +13,7 @@ import {
   X
 } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
-import { shortStellarAddress } from "~/lib/utils";
+import { shortenAddress } from "~/lib/utils";
 import { useAuth } from "~/providers/auth-provider";
 
 export default function ReceiveTransfers() {
@@ -122,7 +122,7 @@ export default function ReceiveTransfers() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between rounded-md bg-gray-50 p-3">
                   <div className="truncate">
-                    {shortStellarAddress(String(address))}
+                    {shortenAddress(String(address))}
                   </div>
                   <Button
                     variant="ghost"

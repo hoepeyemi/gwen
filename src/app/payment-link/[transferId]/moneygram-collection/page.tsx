@@ -27,7 +27,7 @@ interface TransferData {
   recipientName?: string;
   phoneNumber?: string;
   country?: string;
-  currency?: string;
+  currency?: string | { code: string };
   createdAt?: string;
 }
 
@@ -73,8 +73,8 @@ export default function Component() {
         recipientName: transfer.data.recipientName,
         phoneNumber: transfer.data.recipientPhone,
         currency: typeof transfer.data.currency === 'object' && transfer.data.currency !== null
-          ? (transfer.data.currency as { code: string }).code
-          : transfer.data.currency,
+          ? { code: (transfer.data.currency as any).code || "USD" }
+          : transfer.data.currency || "USD",
       });
     }
   }, [transfer.data]);

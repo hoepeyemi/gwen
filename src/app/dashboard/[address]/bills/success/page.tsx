@@ -53,28 +53,28 @@ export default function BillPaymentSuccessPage() {
           <CardContent className="space-y-4">
             {paymentDetails ? (
               <>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Bill Type</span>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Bill Type</span>
                   <span className="font-medium">{paymentDetails.billTypeName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Account Number</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Account Number</span>
                   <span className="font-medium">{paymentDetails.accountNumber}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Amount</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Amount</span>
                   <span className="font-medium">${paymentDetails.amount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Date</span>
-                  <span className="font-medium">
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Date</span>
+              <span className="font-medium">
                     {new Date(paymentDetails.date).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Transaction ID</span>
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Transaction ID</span>
                   <span className="font-medium">{paymentDetails.paymentId}</span>
-                </div>
+            </div>
               </>
             ) : (
               <p className="text-center text-gray-500">Your bill payment has been completed.</p>

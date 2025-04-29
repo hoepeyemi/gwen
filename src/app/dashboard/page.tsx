@@ -26,7 +26,7 @@ import {
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
 import { UserButton } from "@civic/auth-web3/react";
-import { shortStellarAddress } from "~/lib/utils";
+import { shortenAddress } from "~/lib/utils";
 
 interface Transaction {
   id: string;
@@ -341,7 +341,7 @@ function DashboardContent() {
           
           {walletAddress && (
             <div className="mt-4 text-center text-sm text-blue-100">
-              Wallet Address: {shortStellarAddress(walletAddress)}
+              Wallet Address: {shortenAddress(walletAddress)}
             </div>
           )}
         </CardContent>

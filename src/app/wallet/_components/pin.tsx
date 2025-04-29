@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { useAuth } from "~/providers/auth-provider";
+import { generateMockAddress } from "~/lib/client-helpers";
 
 interface PinEntryProps {
   onSuccess: () => void;
@@ -141,7 +142,7 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
             const user = JSON.parse(userData);
             if (!user.walletAddress) {
               // Generate a unique wallet address for the user
-              const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+              const newAddress = generateMockAddress();
               user.walletAddress = newAddress;
               localStorage.setItem("auth_user", JSON.stringify(user));
               console.log("Generated new wallet address on PIN validation:", newAddress);
@@ -206,7 +207,7 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           const user = JSON.parse(userData);
           if (!user.walletAddress) {
             // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
+            const newAddress = generateMockAddress();
             user.walletAddress = newAddress;
             localStorage.setItem("auth_user", JSON.stringify(user));
             console.log("Generated new wallet address via biometric auth:", newAddress);

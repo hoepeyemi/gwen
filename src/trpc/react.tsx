@@ -105,8 +105,8 @@ function getBaseUrl() {
   
   // In development, use localhost
   if (process.env.NODE_ENV === "development") {
-    return `http://localhost:${process.env.PORT ?? 3000}`;
-  }
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
   
   // Fallback for other environments
   return "https://gwen-kohl.vercel.app";

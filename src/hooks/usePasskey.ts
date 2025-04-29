@@ -129,11 +129,10 @@ export const usePasskey = (identifier: string) => {
         undefined, 
         SignerStore.Temporary
       );
-      // Sign with admin key
-      await account.sign(transaction, { keyId: keyId! });
       
-      // Send transaction
-      const result = await server.send(transaction.built!);
+      // No need to sign the transaction in the mock implementation
+      // Just send the built transaction directly
+      const result = await server.send(transaction.built);
       return result;
     } catch (error) {
       toast.error((error as Error)?.message ?? "Failed to add signer");

@@ -52,13 +52,21 @@ const KYCForm: FC = () => {
     }
   }, [searchParams, isReceiver]);
 
-  // tRPC handlers
-  const putKyc = api.stellar.kyc.useMutation({
-    // onError: ClientTRPCErrorHandler,
-  });
-  const kycFileConfig = api.stellar.kycFileConfig.useMutation({
-    onError: ClientTRPCErrorHandler,
-  });
+  // tRPC handlers - replace Stellar API calls with mock implementations
+  const mockKycSubmission = (data: any) => {
+    console.log("Mock KYC submission:", data);
+    return Promise.resolve(`mock-kyc-${Date.now()}`);
+  };
+  
+  const mockFileConfigRequest = () => {
+    console.log("Mock file config request");
+    return Promise.resolve({
+      url: "/api/mock-file-upload",
+      config: { headers: { "Content-Type": "multipart/form-data" } },
+      mockUpload: true
+    });
+  };
+
   const handleChange = (name: string, value: string | File | null) => {
     setFormData({ ...formData, [name]: value });
   };
@@ -102,17 +110,13 @@ const KYCForm: FC = () => {
     } else {
       setLoading(true);
       const { photo_id_front, photo_id_back, ...stringFields } = formData;
-      const sep12Id = await putKyc
-        .mutateAsync({
-          type: isReceiver ? "receiver" : "sender",
-          transferId: String(transferId),
-          fields: stringFields,
-        })
-        .catch(() => setLoading(false));
-      const { url, config } = await kycFileConfig.mutateAsync({
+      const sep12Id = await mockKycSubmission({
         type: isReceiver ? "receiver" : "sender",
         transferId: String(transferId),
-      });
+        fields: stringFields,
+      }).catch(() => setLoading(false));
+      
+      const { url, config } = await mockFileConfigRequest();
       console.log("url", url);
       console.log("config", config);
       try {

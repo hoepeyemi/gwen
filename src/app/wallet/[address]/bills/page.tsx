@@ -44,10 +44,10 @@ export default function BillsPage() {
   const { clickFeedback } = useHapticFeedback();
   const router = useRouter();
   const params = useParams();
-  
+
   // Get bill types from the API
   const { data: apiBillTypes, isLoading: isLoadingBillTypes } = api.bills.getBillTypes.useQuery();
-  
+
   // Payment mutation
   const payBillMutation = api.bills.payBill.useMutation({
     onSuccess: (data) => {
@@ -76,7 +76,7 @@ export default function BillsPage() {
       toast.error(`Payment failed: ${error.message}`);
     }
   });
-  
+
   const handleBack = () => {
     if (billStep === "select") {
       router.push(`/wallet/${params.address}`);
@@ -87,13 +87,13 @@ export default function BillsPage() {
     }
     clickFeedback("soft");
   };
-  
+
   const handleBillSelect = (bill: any) => {
     setSelectedBill(bill);
     setBillStep("details");
     clickFeedback();
   };
-  
+
   const handlePayBill = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -101,7 +101,7 @@ export default function BillsPage() {
       toast.error("Please fill in all required fields");
       return;
     }
-    
+
     if (isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error("Please enter a valid amount");
       return;
@@ -115,16 +115,16 @@ export default function BillsPage() {
     setShowPinEntry(false);
     setIsLoading(true);
     clickFeedback("medium");
-    
-    try {
-      await payBillMutation.mutateAsync({
+
+      try {
+        await payBillMutation.mutateAsync({
         billId: selectedBill.id,
         amount: Number(amount),
         accountNumber,
         address
-      });
-    } catch (error) {
-      // Error is handled in the mutation callbacks
+        });
+      } catch (error) {
+        // Error is handled in the mutation callbacks
     }
   };
   
@@ -132,7 +132,7 @@ export default function BillsPage() {
     setShowPinEntry(false);
     clickFeedback("soft");
   };
-  
+
   if (isLoadingBillTypes) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -140,20 +140,20 @@ export default function BillsPage() {
       </div>
     );
   }
-  
+
   const billTypes = apiBillTypes || [];
   
-  return (
+    return (
     <div className="space-y-6 p-4">
       <div className="flex items-center space-x-4">
-        <Button
-          onClick={handleBack}
-          variant="ghost"
+          <Button
+            onClick={handleBack}
+            variant="ghost"
           size="icon"
           className="h-10 w-10 rounded-full hover:bg-blue-50"
-        >
+          >
           <ArrowLeft className="h-5 w-5" />
-        </Button>
+          </Button>
         <h1 className="text-2xl font-bold text-blue-600">
           {billStep === "select"
             ? "Pay Bills"
@@ -187,34 +187,34 @@ export default function BillsPage() {
       
       {billStep === "details" && selectedBill && (
         <Card>
-          <CardHeader>
+            <CardHeader>
             <CardTitle>{selectedBill.name} Bill</CardTitle>
             <CardDescription>Enter your account details</CardDescription>
-          </CardHeader>
-          <CardContent>
+            </CardHeader>
+            <CardContent>
             <form onSubmit={handlePayBill} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  id="accountNumber"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Enter your account number"
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="accountNumber">Account Number</Label>
+                  <Input
+                    id="accountNumber"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="Enter your account number"
+                    required
+                  />
+                </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Amount</Label>
+                  <Input
+                    id="amount"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
                   type="number"
                   min="0.01"
                   step="0.01"
-                  required
+                    required
                 />
               </div>
               
@@ -225,14 +225,14 @@ export default function BillsPage() {
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Enter service address"
-                />
-              </div>
+                  />
+                </div>
               
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading}
-              >
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={isLoading}
+                >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -241,10 +241,10 @@ export default function BillsPage() {
                 ) : (
                   "Continue to Payment"
                 )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
       )}
       
       {/* Pin Entry modal */}
@@ -252,7 +252,7 @@ export default function BillsPage() {
         <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
           <Card className="w-full max-w-md">
             <PinEntry onSuccess={handlePinSuccess} onCancel={handlePinCancel} />
-          </Card>
+            </Card>
         </div>
       )}
     </div>
