@@ -135,7 +135,7 @@ export default function InvestmentsPage() {
   };
 
   const handleInvestmentSelect = (investment: InvestmentOption) => {
-    router.push(`/dashboard/investment-details?id=${investment.id}&type=${selectedTab}`);
+    router.push(`/wallet/investment-details?id=${investment.id}&type=${selectedTab}`);
   };
 
   const getRiskClass = (risk: "Low" | "Medium" | "High") => {
