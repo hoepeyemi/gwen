@@ -21,7 +21,8 @@ import {
   Banknote,
   User,
   ArrowDownToLine,
-  ArrowRight
+  ArrowRight,
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "~/providers/auth-provider";
 import toast from "react-hot-toast";
@@ -195,8 +196,8 @@ function DashboardContent() {
 
   const handleInvestments = () => {
     if (walletAddress) {
-      router.push(`/dashboard/${walletAddress}/investments`);
-            } else {
+      router.push(`/dashboard/investments`);
+    } else {
       toast.error("No wallet address found");
     }
   };
@@ -389,7 +390,19 @@ function DashboardContent() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handleInvestments}>
+          <CardContent className="flex items-center space-x-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
+            <div>
+              <h3 className="font-semibold">Investments</h3>
+              <p className="text-sm text-gray-500">Grow your money with investments</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Tabs defaultValue="transactions">
         <TabsList className="grid w-full grid-cols-2">
