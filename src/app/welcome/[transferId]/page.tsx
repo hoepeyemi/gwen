@@ -181,7 +181,7 @@ export default function Component() {
         await newOtp.mutateAsync({ phone: transfer.data?.recipientPhone });
         
         // Auto-fill with default demo OTP code
-        setOtp(["0", "0", "0", "0", "0", "0"]);
+        setOtp([]);
         console.log("Auto-filled with default demo OTP: 000000");
         
         setAttempt((prev) => prev + 1);
