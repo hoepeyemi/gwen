@@ -617,13 +617,16 @@ export const stellarRouter = createTRPCRouter({
           }
           
           return { 
-            url: "https://example.com/mock-kyc-upload", 
+            // Use an API route in our own application to avoid CORS issues
+            url: "/api/kyc/mock-upload", 
             config: {
               headers: {
                 "Content-Type": "multipart/form-data",
                 Authorization: "Bearer mock-token"
               }
-            } 
+            },
+            // Add this flag to indicate this is a mock response and client should skip actual upload
+            mockUpload: true
           };
         }
 
@@ -649,13 +652,16 @@ export const stellarRouter = createTRPCRouter({
         // If we're in development mode and mocking is allowed, return a mock config
         if (process.env.NODE_ENV === 'development' || process.env.MOCK_KYC === 'true') {
           return { 
-            url: "https://example.com/mock-kyc-upload", 
+            // Use an API route in our own application to avoid CORS issues
+            url: "/api/kyc/mock-upload", 
             config: {
               headers: {
                 "Content-Type": "multipart/form-data",
                 Authorization: "Bearer mock-token"
               }
-            } 
+            },
+            // Add this flag to indicate this is a mock response and client should skip actual upload
+            mockUpload: true
           };
         }
         

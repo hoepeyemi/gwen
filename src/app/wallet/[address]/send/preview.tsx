@@ -286,6 +286,14 @@ export default function SendPreview({
         
         // Upload ID documents
         if (fileUploadConfig?.url && fileUploadConfig?.config) {
+          // Check if this is a mock upload response (for development)
+          if (fileUploadConfig.mockUpload) {
+            console.log("Mock upload detected, skipping actual file upload");
+            // Proceed without attempting actual file upload
+            processPayment();
+            return;
+          }
+          
           const formData = new FormData();
           if (sep12Id) {
             formData.append("id", String(sep12Id));
@@ -298,16 +306,27 @@ export default function SendPreview({
           }
           
           try {
-            await axios.put(fileUploadConfig.url, formData, fileUploadConfig.config);
+            // Check if the URL is relative (our own API) or absolute
+            const isRelativeUrl = fileUploadConfig.url.startsWith('/');
+            const uploadUrl = isRelativeUrl 
+              ? `${window.location.origin}${fileUploadConfig.url}`
+              : fileUploadConfig.url;
+              
+            await axios.put(uploadUrl, formData, fileUploadConfig.config);
           } catch (error) {
             console.error("Failed to upload ID documents:", error);
             
-            // Only show error in production if upload fails
-            if (!isDev) {
-              setKycError("Could not upload your documents. Please try again later.");
-              setIsLoading(false);
+            // In development mode, proceed anyway despite upload failure
+            if (isDev) {
+              console.log("Development mode: Proceeding despite upload failure");
+              processPayment();
               return;
             }
+            
+            // Only show error in production if upload fails
+            setKycError("Could not upload your documents. Please try again later.");
+            setIsLoading(false);
+            return;
           }
         }
         
