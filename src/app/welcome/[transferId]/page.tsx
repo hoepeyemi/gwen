@@ -180,9 +180,8 @@ export default function Component() {
         }
         await newOtp.mutateAsync({ phone: transfer.data?.recipientPhone });
         
-        // Auto-fill with default demo OTP code
-        setOtp(["0", "0", "0", "0", "0", "0"]);
-        console.log("Auto-filled with default demo OTP: 000000");
+        // Remove auto-fill code
+        setOtp(["", "", "", "", "", ""]);
         
         setAttempt((prev) => prev + 1);
         clickFeedback("success");
@@ -196,9 +195,8 @@ export default function Component() {
         setIsLoading(true);
         await newOtp.mutateAsync({ phone: phoneNumber });
         
-        // Auto-fill with default demo OTP code
-        setOtp(["0", "0", "0", "0", "0", "0"]);
-        console.log("Auto-filled with default demo OTP: 000000");
+        // Remove auto-fill code
+        setOtp(["", "", "", "", "", ""]);
         
         setAttempt((prev) => prev + 1);
         clickFeedback("success");
@@ -269,9 +267,8 @@ export default function Component() {
       setIsLoading(false);
       setResendTimer(59); // Reset resend timer
       
-      // Auto-fill with default demo OTP code instead of clearing it
-      setOtp(["0", "0", "0", "0", "0", "0"]);
-      console.log("Auto-filled with default demo OTP on resend: 000000");
+      // Remove auto-fill code and console.log
+      setOtp(["", "", "", "", "", ""]);
     } catch (e) {
       setIsLoading(false);
     }
@@ -519,19 +516,6 @@ export default function Component() {
                   )}
                 </Button>
               </div>
-              
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-4 flex justify-center">
-                  <Button 
-                    type="button"
-                    variant="outline" 
-                    onClick={() => setOtp(['0', '0', '0', '0', '0', '0'])}
-                    className="bg-blue-100 text-blue-600 border-blue-300 hover:bg-blue-200"
-                  >
-                    Auto-fill Test Code (000000)
-                  </Button>
-                </div>
-              )}
             </div>
           </form>
         );
