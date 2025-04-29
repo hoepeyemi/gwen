@@ -7,7 +7,6 @@ import { CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { useAuth } from "~/providers/auth-provider";
 import { generateMockAddress } from "~/lib/client-helpers";
-import { api } from "~/trpc/react";
 
 interface PinEntryProps {
   onSuccess: () => void;
@@ -26,17 +25,6 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
     window.PublicKeyCredential !== undefined &&
     typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
   );
-
-  // Setup the PIN validation mutation
-  const validatePinMutation = api.users.validatePin.useMutation({
-    onError: (error) => {
-      setShake(true);
-      clickFeedback("medium");
-      setError(error.message || "Incorrect PIN. Please try again.");
-      setPin("");
-      setLoading(false);
-    }
-  });
 
   // Reset shake animation
   useEffect(() => {
@@ -59,19 +47,92 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
     setLoading(true);
     setError(null);
     
+    // Try to get PIN from multiple sources
+    let userPin: string | null = null;
+    
+    // First, check localStorage for a directly stored PIN
     try {
-      // Get user ID from context
-      if (!user || !user.id) {
-        throw new Error("User not found");
+      const storedPinData = localStorage.getItem("user_pin");
+      if (storedPinData) {
+        const parsedPinData = JSON.parse(storedPinData);
+        if (parsedPinData && parsedPinData.pin) {
+          userPin = parsedPinData.pin;
+          console.log("Found PIN in direct storage");
+        }
+      }
+    } catch (err) {
+      console.error("Error retrieving PIN from direct storage:", err);
+    }
+    
+    // If no PIN found yet, try to get it from auth_user in localStorage
+    if (!userPin) {
+      try {
+        const userData = localStorage.getItem("auth_user");
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          if (parsedUserData && parsedUserData.pin) {
+            userPin = parsedUserData.pin;
+            console.log("Found PIN in auth_user storage");
+          }
+        }
+      } catch (err) {
+        console.error("Error retrieving PIN from auth_user storage:", err);
+      }
+    }
+    
+    // If still no PIN, try to refresh from server and check again
+    if (!userPin && user && user.id) {
+      try {
+        console.log("Refreshing user data to find PIN");
+        await refreshUserData(user.id);
+        
+        // After refresh, check auth_user data in localStorage again
+        // The user object from context doesn't have 'pin' property
+        const refreshedData = localStorage.getItem("auth_user");
+        if (refreshedData) {
+          const parsedRefreshedData = JSON.parse(refreshedData);
+          // Check for PIN in the refreshed data as it might contain additional fields
+          if (parsedRefreshedData && parsedRefreshedData.pin) {
+            userPin = parsedRefreshedData.pin;
+            console.log("Found PIN in refreshed auth_user data");
+          } else if (parsedRefreshedData.hashedPin) {
+            // If no direct pin field but user has completed PIN setup
+            console.log("User has hashedPin set but no stored PIN");
+          }
+        }
+      } catch (err) {
+        console.error("Error refreshing user data to find PIN:", err);
+      }
+    }
+    
+    try {
+      // Simulate server validation delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Validate the PIN
+      const demoPin = "123456";
+      let isValid = false;
+      
+      if (userPin) {
+        // Validate against the user's custom PIN
+        isValid = pin === userPin;
+        console.log("Validating against user's custom PIN");
+      } else {
+        // Fall back to the entered PIN itself for validation
+        // This is for cases where we can't find the stored PIN
+        isValid = pin === demoPin;
+        console.log("No stored PIN found, validating against demo PIN (123456)");
+        
+        // Store this PIN for future reference
+        try {
+          localStorage.setItem("user_pin", JSON.stringify({ pin: pin, created: new Date().toISOString() }));
+          console.log("Stored entered PIN for future validation");
+        } catch (err) {
+          console.error("Failed to store PIN:", err);
+        }
       }
       
-      // Call the server to validate the PIN
-      const result = await validatePinMutation.mutateAsync({
-        userId: user.id,
-        pin: pin
-      });
-      
-      if (result.success) {
+      if (isValid) {
         clickFeedback("medium");
         
         // Immediately generate wallet address if not already present
@@ -96,18 +157,18 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           onSuccess();
         }, 200);
       } else {
-        throw new Error("Invalid PIN");
-      }
-    } catch (err: unknown) {
-      // Error handling is done in the mutation's onError callback
-      const error = err as Error;
-      if (error.message && !error.message.includes("Invalid PIN")) {
         setShake(true);
         clickFeedback("medium");
-        setError("An error occurred. Please try again.");
+        setError("Incorrect PIN. Please try again.");
         setPin("");
         setLoading(false);
       }
+    } catch (err) {
+      setShake(true);
+      clickFeedback("medium");
+      setError("An error occurred. Please try again.");
+      setPin("");
+      setLoading(false);
     }
   };
 

@@ -115,35 +115,4 @@ export const userRouter = createTRPCRouter({
       }
       return { success: true };
     }),
-  updatePin: publicProcedure
-    .input(
-      z.object({
-        userId: z.string().or(z.number()),
-        pin: z.string(),
-        currentPin: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const authService = new AuthService(ctx.db);
-        console.log("Updating PIN for user ID:", Number(input.userId));
-        
-        const result = await authService.updatePin(
-          Number(input.userId),
-          input.pin,
-          input.currentPin
-        );
-        
-        console.log("PIN update result:", result);
-        
-        return result;
-      } catch (error) {
-        console.error("Error in updatePin procedure:", error);
-        
-        return { 
-          success: false, 
-          message: "An unexpected error occurred while updating PIN" 
-        };
-      }
-    }),
 });

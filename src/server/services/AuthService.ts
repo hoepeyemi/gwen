@@ -44,7 +44,7 @@ export class AuthService extends BaseService {
   }
 
   /**
-   * Set the pin for the user, only if they don't already have one
+   * Set the pin for the user
    * @param userId
    * @param pin
    */
@@ -86,60 +86,6 @@ export class AuthService extends BaseService {
     } catch (e) {
       console.error("Error in AuthService.setPin:", e);
       return { success: false };
-    }
-  }
-
-  /**
-   * Update the pin for the user, whether they already have one or not
-   * @param userId
-   * @param pin
-   * @param currentPin Optional current PIN for verification
-   */
-  async updatePin(
-    userId: number, 
-    pin: string, 
-    currentPin?: string
-  ): Promise<{ success: boolean; message?: string }> {
-    try {
-      // Validate inputs
-      if (!userId || !pin) {
-        console.error("Invalid inputs for updatePin:", { userId, pinLength: pin?.length });
-        return { success: false, message: "Invalid user ID or PIN" };
-      }
-
-      // Find the user
-      const user = await this.db.user.findUnique({
-        where: { id: userId },
-        select: { id: true, hashedPin: true }
-      });
-
-      if (!user) {
-        console.error("User not found for updatePin:", userId);
-        return { success: false, message: "User not found" };
-      }
-      
-      // If user has a PIN and currentPin is provided, verify it
-      if (user.hashedPin && currentPin) {
-        const isValid = await bcrypt.compare(currentPin, user.hashedPin);
-        if (!isValid) {
-          return { success: false, message: "Current PIN is incorrect" };
-        }
-      }
-      
-      // Generate hashed pin
-      const hashedPin = await this.toHash(pin);
-      
-      // Update user with new hashed pin
-      await this.db.user.update({
-        where: { id: userId },
-        data: { hashedPin },
-      });
-      
-      console.log("PIN updated successfully for user", userId);
-      return { success: true, message: "PIN updated successfully" };
-    } catch (e) {
-      console.error("Error in AuthService.updatePin:", e);
-      return { success: false, message: "An error occurred while updating the PIN" };
     }
   }
 }
