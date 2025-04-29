@@ -8,7 +8,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
-import PinController from "~/app/wallet/_components/pin-controller";
+import PinEntry from "~/app/wallet/_components/pin";
 
 // Add Dialog components for the PIN verification modal
 import {
@@ -174,7 +174,7 @@ export default function BillsPage() {
                 Enter your PIN to authorize the {selectedBill.name} bill payment of ${amount}
               </DialogDescription>
             </DialogHeader>
-            <PinController 
+            <PinEntry 
               onSuccess={handlePinSuccess} 
               onCancel={handlePinCancel}
             />

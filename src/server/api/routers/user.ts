@@ -115,25 +115,4 @@ export const userRouter = createTRPCRouter({
       }
       return { success: true };
     }),
-  checkPin: publicProcedure
-    .input(z.object({ userId: z.string().or(z.number()) }))
-    .query(async ({ ctx, input }) => {
-      try {
-        const user = await ctx.db.user.findUnique({
-          where: { id: Number(input.userId) },
-          select: { hashedPin: true }
-        });
-        
-        return { 
-          hasPinSet: !!user?.hashedPin,
-          message: user?.hashedPin ? "User has PIN set" : "User does not have a PIN set"
-        };
-      } catch (error) {
-        console.error("Error in checkPin procedure:", error);
-        return { 
-          hasPinSet: false, 
-          message: "Error checking PIN status" 
-        };
-      }
-    }),
 });
