@@ -155,7 +155,7 @@ export default function SignUp() {
               className="p-0" 
               onClick={() => router.push("/auth/signin")}
             >
-              Sign up
+              Sign in
             </Button>
           </div>
           <div className="text-center text-xs text-gray-500">
