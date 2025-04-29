@@ -77,7 +77,11 @@ export default function BillsPage() {
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard`);
+    if (selectedBill) {
+      setSelectedBill(null);
+    } else {
+      router.push(`/dashboard`);
+    }
   };
 
   const handleBillSelect = (bill: BillType) => {
@@ -98,10 +102,42 @@ export default function BillsPage() {
     setIsPinModalOpen(false);
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    router.push(`/dashboard/${address}/bills/success`);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // If we're using a route parameter, make sure it's valid
+      const userAddress = address || '';
+      
+      // If the address is empty or invalid, try to get it from localStorage
+      if (!userAddress || userAddress === '[address]') {
+        try {
+          const userData = localStorage.getItem("auth_user");
+          if (userData) {
+            const user = JSON.parse(userData);
+            if (user.walletAddress) {
+              // Navigate to the success page with the user's wallet address
+              router.push(`/dashboard/${user.walletAddress}/bills/success`);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error retrieving wallet address:", error);
+        }
+      }
+      
+      // If we get here, either use the provided address or navigate without it
+      if (userAddress && userAddress !== '[address]') {
+        router.push(`/dashboard/${userAddress}/bills/success`);
+      } else {
+        // Fallback if we couldn't get a valid address
+        router.push(`/dashboard/bills/success`);
+      }
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      setIsLoading(false);
+      // Show error handling here if needed
+    }
   };
   
   const handlePinCancel = () => {

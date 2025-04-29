@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { CheckCircle2, ArrowLeft } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 
 export default function BillPaymentSuccessPage() {
-  const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
 
@@ -16,21 +15,19 @@ export default function BillPaymentSuccessPage() {
     // Simulate haptic feedback on page load
     clickFeedback();
     
-    // If address is missing or invalid, try to get it from localStorage
-    if (!address || address === '[address]') {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            // Replace the current URL with the correct wallet address without reloading
-            const newUrl = `/dashboard/${user.walletAddress}/bills/success`;
-            window.history.replaceState({ path: newUrl }, '', newUrl);
-          }
+    // Try to redirect to the correct address-based success page
+    try {
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        if (user.walletAddress) {
+          // Replace the current URL with the correct wallet address without reloading
+          const newUrl = `/dashboard/${user.walletAddress}/bills/success`;
+          window.history.replaceState({ path: newUrl }, '', newUrl);
         }
-      } catch (error) {
-        console.error("Error retrieving wallet address:", error);
       }
+    } catch (error) {
+      console.error("Error retrieving wallet address:", error);
     }
   }, []);
 
@@ -38,29 +35,21 @@ export default function BillPaymentSuccessPage() {
     clickFeedback();
     
     // Try to get the wallet address for redirection
-    let walletAddress = address;
-    
-    // If address is missing or invalid, try to get it from localStorage
-    if (!walletAddress || walletAddress === '[address]') {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            walletAddress = user.walletAddress;
-          }
+    try {
+      const userData = localStorage.getItem("auth_user");
+      if (userData) {
+        const user = JSON.parse(userData);
+        if (user.walletAddress) {
+          router.push(`/dashboard/${user.walletAddress}`);
+          return;
         }
-      } catch (error) {
-        console.error("Error retrieving wallet address:", error);
       }
+    } catch (error) {
+      console.error("Error retrieving wallet address:", error);
     }
     
-    // Navigate back to the dashboard with the wallet address if available
-    if (walletAddress && walletAddress !== '[address]') {
-      router.push(`/dashboard/${walletAddress}`);
-    } else {
-      router.push('/dashboard');
-    }
+    // Fallback to main dashboard
+    router.push('/dashboard');
   };
 
   return (

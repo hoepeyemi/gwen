@@ -46,6 +46,9 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
     setLoading(true);
     setError(null);
     
+    // Check if we're in development mode
+    const isDev = process.env.NODE_ENV === 'development';
+    
     // Try to get PIN from multiple sources
     let userPin: string | null = null;
     
@@ -108,19 +111,24 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
       // Simulate server validation delay
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      // Validate the PIN
+      // Default demo PIN that should always work
       const demoPin = "123456";
       let isValid = false;
       
-      if (userPin) {
-        // Validate against the user's custom PIN
-        isValid = pin === userPin;
+      // In development mode, always accept the demo PIN
+      if (isDev && pin === demoPin) {
+        console.log("Development mode: Accepting demo PIN (123456)");
+        isValid = true;
+      } 
+      // Also accept user's custom PIN if it exists
+      else if (userPin && pin === userPin) {
         console.log("Validating against user's custom PIN");
-      } else {
-        // Fall back to the entered PIN itself for validation
-        // This is for cases where we can't find the stored PIN
-        isValid = pin === demoPin;
-        console.log("No stored PIN found, validating against demo PIN (123456)");
+        isValid = true;
+      }
+      // If no PIN was found and we're in development, allow the first PIN entry to be set
+      else if (!userPin && isDev) {
+        console.log("Development mode: No stored PIN found, accepting entered PIN");
+        isValid = true;
         
         // Store this PIN for future reference
         try {
@@ -129,6 +137,12 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
         } catch (err) {
           console.error("Failed to store PIN:", err);
         }
+      }
+      // In production with no PIN, use a stricter approach
+      else if (!userPin) {
+        // This is a fallback that should rarely happen in production
+        isValid = pin === demoPin;
+        console.log("No stored PIN found, validating against demo PIN (123456)");
       }
       
       if (isValid) {
