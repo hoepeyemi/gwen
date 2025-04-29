@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card } from "~/components/ui/card";
-import PinEntry from "~/app/wallet/_components/pin";
+import PinController from "~/app/wallet/_components/pin-controller";
 import { useAuth } from "~/providers/auth-provider";
 
 // Create a separate component that uses useSearchParams
@@ -170,7 +170,7 @@ function PinAuthenticationContent() {
   return (
     <div className="w-full max-w-md">
       <Card className="border-none shadow-lg">
-        <PinEntry 
+        <PinController 
           onSuccess={handlePinSuccess} 
           onCancel={handleCancel} 
         />
