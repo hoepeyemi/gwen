@@ -1,7 +1,7 @@
 "use client";
 
 import { type FC, useEffect, useState } from "react";
-import { Fingerprint, ScanFaceIcon, Delete, Shield, Check } from "lucide-react";
+import { Fingerprint, ScanFaceIcon, Delete, Shield, Check, X } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
@@ -12,16 +12,16 @@ import { toast } from "react-hot-toast";
 interface PinEntryProps {
   onSuccess: () => void;
   onCancel?: () => void;
+  mode?: 'create' | 'verify'; // Added mode prop to support both creating and verifying PINs
 }
 
-const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
+const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel, mode = 'verify' }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [pin, setPin] = useState<string>("");
   const [confirmPin, setConfirmPin] = useState<string>("");
-  const [isPinSetupMode, setIsPinSetupMode] = useState<boolean>(false);
-  const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<'enter' | 'confirm'>(mode === 'create' ? 'enter' : 'enter');
   const { clickFeedback } = useHapticFeedback();
   const { user, refreshUserData } = useAuth();
   const [biometricSupported] = useState<boolean>(
@@ -33,60 +33,27 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
   // tRPC mutations for PIN operations
   const setPinMutation = api.users.setPin.useMutation({
     onSuccess: () => {
-      toast("PIN created successfully", {
-        icon: '✅',
-        style: {
-          borderRadius: '10px',
-          background: '#10b981',
-          color: '#fff',
-        },
-      });
-      setPin("");
-      setConfirmPin("");
-      setIsConfirming(false);
-      setIsPinSetupMode(false);
-      
-      // Immediately continue with success
+      toast.success("PIN created successfully");
       onSuccess();
     },
     onError: (error) => {
       setError(`Failed to set PIN: ${error.message}`);
-      setShake(true);
       setPin("");
       setConfirmPin("");
-      setIsConfirming(false);
+      setStep('enter');
       setLoading(false);
     }
   });
   
   const validatePinMutation = api.users.validatePin.useMutation({
-    onSuccess: (data) => {
-      if (data.success) {
-        clickFeedback("success");
-        onSuccess();
-      } else if (data.needsSetup) {
-        // If PIN not set up yet, switch to setup mode
-        setIsPinSetupMode(true);
-        setPin("");
-        setLoading(false);
-        toast("Please set up your PIN first", {
-          icon: '🔔',
-          style: {
-            borderRadius: '10px',
-            background: '#3b82f6',
-            color: '#fff',
-          },
-        });
-      } else {
-        setError("Incorrect PIN. Please try again.");
-        setShake(true);
-        setPin("");
-        setLoading(false);
-      }
+    onSuccess: () => {
+      clickFeedback("success");
+      onSuccess();
     },
-    onError: (error) => {
-      setError(`Error: ${error.message}`);
+    onError: () => {
       setShake(true);
+      clickFeedback("error");
+      setError("Incorrect PIN. Please try again.");
       setPin("");
       setLoading(false);
     }
@@ -103,78 +70,72 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
   // Auto-validate PIN when 6 digits entered
   useEffect(() => {
     if (pin.length === 6 && !loading) {
-      if (isPinSetupMode) {
-        if (!isConfirming) {
-          // First entry of PIN setup - move to confirmation
-          setIsConfirming(true);
-          setConfirmPin(pin);
-          setPin("");
-        } else {
-          // Confirming PIN setup
-          if (pin === confirmPin) {
-            // PINs match - save to database
-            setupPin();
-          } else {
-            // PINs don't match
-            setError("PINs don't match. Please try again.");
-            setShake(true);
-            setPin("");
-            setConfirmPin("");
-            setIsConfirming(false);
-          }
-        }
-      } else {
-        // Regular PIN validation
+      if (mode === 'create' && step === 'enter') {
+        setStep('confirm');
+        setLoading(false);
+      } else if (mode === 'verify' || step === 'confirm') {
         validatePin();
       }
     }
-  }, [pin, loading, isPinSetupMode, isConfirming, confirmPin]);
+  }, [pin, loading, mode, step]);
 
-  // Setup a new PIN in the database
-  const setupPin = async () => {
-    if (!user || !user.id) {
-      setError("User not found. Please log in again.");
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      await setPinMutation.mutateAsync({
-        userId: user.id,
-        pin: confirmPin,
-      });
-      
-      // Success is handled in the mutation callbacks
-    } catch (error) {
-      // Error is handled in the mutation callbacks
-      console.error("Error setting up PIN:", error);
-    }
-  };
-
-  // Validate an existing PIN against the database
   const validatePin = async () => {
     if (loading) return; // Prevent multiple validation attempts
     
-    if (!user || !user.id) {
-      setError("User not found. Please log in again.");
-      return;
-    }
-    
     setLoading(true);
     setError(null);
     
     try {
-      await validatePinMutation.mutateAsync({
-        userId: user.id,
-        pin: pin,
-      });
-      
-      // Success/failure is handled in the mutation callbacks
-    } catch (error) {
-      // Error is handled in the mutation callbacks
-      console.error("Error validating PIN:", error);
+      if (mode === 'create') {
+        if (step === 'confirm') {
+          // In creation mode, confirm step - check if PINs match
+          if (pin !== confirmPin) {
+            setShake(true);
+            clickFeedback("error");
+            setError("PINs don't match. Please try again.");
+            setPin("");
+            setConfirmPin("");
+            setStep('enter');
+            setLoading(false);
+            return;
+          }
+          
+          // PINs match, save to database
+          if (user && user.id) {
+            await setPinMutation.mutateAsync({
+              userId: user.id, 
+              pin: pin
+            });
+          } else {
+            setError("No user found. Please log in again.");
+            setLoading(false);
+          }
+        } else {
+          // First pin entry complete, now confirm
+          setConfirmPin(pin);
+          setPin("");
+          setStep('confirm');
+          setLoading(false);
+        }
+      } else {
+        // Verify mode - validate PIN against database
+        if (user && user.id) {
+          await validatePinMutation.mutateAsync({
+            userId: user.id,
+            pin: pin
+          });
+        } else {
+          setError("No user found. Please log in again.");
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      console.error("PIN validation error:", err);
+      setShake(true);
+      clickFeedback("error");
+      setError("An error occurred. Please try again.");
+      setPin("");
+      setLoading(false);
     }
   };
 
@@ -205,7 +166,6 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
       // Here you would implement actual biometric authentication
       // For now, just simulate success after a delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
       onSuccess();
     } catch (err) {
       setError("Biometric authentication failed. Please use your PIN.");
@@ -218,13 +178,15 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
     <div>
       <CardHeader className="space-y-1">
         <CardTitle className="text-center text-2xl font-bold">
-          Gwen
+          {mode === 'create' 
+            ? (step === 'enter' ? 'Create PIN' : 'Confirm PIN')
+            : 'Enter PIN'}
         </CardTitle>
         <p className="text-center text-gray-600">
           {loading ? "Verifying..." : 
-            isPinSetupMode ? 
-              (isConfirming ? "Confirm your new PIN" : "Create a new PIN") : 
-              "Enter your PIN"}
+            mode === 'create'
+              ? (step === 'enter' ? "Create a 6-digit PIN" : "Confirm your PIN")
+              : "Enter your 6-digit PIN"}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -247,12 +209,6 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           ))}
         </div>
 
-        {isPinSetupMode && isConfirming && (
-          <div className="text-center text-sm text-blue-600">
-            <p>Enter the same PIN again to confirm</p>
-          </div>
-        )}
-
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
             <Button
@@ -269,7 +225,7 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
             variant="outline"
             onClick={handleBiometric}
             className="flex h-14 items-center justify-center"
-            disabled={loading || !biometricSupported || isPinSetupMode}
+            disabled={loading || !biometricSupported || mode === 'create'}
           >
             <Fingerprint className="h-6 w-6 text-blue-500" />
           </Button>

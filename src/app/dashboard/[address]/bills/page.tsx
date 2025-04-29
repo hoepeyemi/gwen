@@ -6,12 +6,12 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X } from "lucide-react";
+import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X, ShieldCheck } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import PinEntry from "~/app/wallet/_components/pin";
-import { toast } from "react-hot-toast";
-import { api } from "~/trpc/react";
 import { useAuth } from "~/providers/auth-provider";
+import { api } from "~/trpc/react";
+import { toast } from "react-hot-toast";
 
 // Add Dialog components for the PIN verification modal
 import {
@@ -78,22 +78,20 @@ export default function BillsPage() {
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [isCheckingPin, setIsCheckingPin] = useState(false);
-
-  // Query to check if user has a PIN set up
-  const userDetailsQuery = api.users.getUserDetails.useQuery(
+  const [pinMode, setPinMode] = useState<'create' | 'verify'>('verify');
+  
+  // Fetch user data to check if PIN is set
+  const { data: userData, isLoading: isUserLoading } = api.users.getUserById.useQuery(
     { userId: user?.id || 0 },
-    {
-      enabled: !!user?.id, // Only run when user ID is available
-      staleTime: 60000, // Cache result for 1 minute
-    }
+    { enabled: !!user?.id, staleTime: 5 * 60 * 1000 } // 5 minutes
   );
 
+  // Handle case when backing from a bill selection
   const handleBack = () => {
-    clickFeedback();
     if (selectedBill) {
       setSelectedBill(null);
     } else {
+      clickFeedback();
       router.push(`/dashboard/${address}`);
     }
   };
@@ -113,98 +111,47 @@ export default function BillsPage() {
       return;
     }
     
-    setIsCheckingPin(true);
-    
-    try {
-      // Check if user has a PIN set up
-      if (userDetailsQuery.data?.hasPinSetup) {
-        // User has a PIN, show verification modal
-        setIsPinModalOpen(true);
-      } else {
-        // User needs to set up a PIN first, redirect to PIN setup
-        toast("You need to set up a PIN first", {
-          icon: '🔔',
-          style: {
-            borderRadius: '10px',
-            background: '#3b82f6',
-            color: '#fff',
-          },
-        });
-        
-        // Store current bill payment intent in sessionStorage
-        try {
-          sessionStorage.setItem("pendingBillPayment", JSON.stringify({
-            billType: selectedBill?.id,
-            accountNumber,
-            amount,
-            timestamp: new Date().toISOString()
-          }));
-        } catch (error) {
-          console.error("Failed to store pending payment:", error);
-        }
-        
-        // Redirect to PIN setup
-        router.push("/wallet/pin-setup");
-      }
-    } catch (error) {
-      console.error("Error checking PIN status:", error);
-      toast.error("An error occurred. Please try again.");
-    } finally {
-      setIsCheckingPin(false);
+    // Check if user has a PIN set
+    if (userData && !userData.hashedPin) {
+      // User needs to create a PIN first
+      setPinMode('create');
+      setIsPinModalOpen(true);
+    } else {
+      // User has PIN, verify it
+      setPinMode('verify');
+      setIsPinModalOpen(true);
     }
   };
   
   const handlePinSuccess = async () => {
-    // PIN verified successfully, now process the payment
+    // PIN verified or created successfully, now process the payment
     setIsPinModalOpen(false);
     setIsLoading(true);
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
     
-    // Clear any pending bill payment from session storage
-    try {
-      sessionStorage.removeItem("pendingBillPayment");
-    } catch (error) {
-      console.error("Error clearing pending payment:", error);
-    }
-    
-    // Navigate to success page
+    toast.success(`${selectedBill?.name} bill payment successful!`);
     router.push(`/dashboard/${address}/bills/success`);
   };
   
   const handlePinCancel = () => {
     setIsPinModalOpen(false);
+    toast.error("Payment cancelled");
   };
 
-  // Check for pending bill payment on mount
-  useEffect(() => {
-    if (!selectedBill) {
-      try {
-        const pendingPaymentStr = sessionStorage.getItem("pendingBillPayment");
-        if (pendingPaymentStr) {
-          const pendingPayment = JSON.parse(pendingPaymentStr);
-          // Find the bill type that matches the pending payment
-          const matchingBill = billTypes.find(bill => bill.id === pendingPayment.billType);
-          if (matchingBill) {
-            setSelectedBill(matchingBill);
-            setAccountNumber(pendingPayment.accountNumber || "");
-            setAmount(pendingPayment.amount || "");
-            toast("Continuing with your pending bill payment", {
-              icon: '🔔',
-              style: {
-                borderRadius: '10px',
-                background: '#3b82f6',
-                color: '#fff',
-              },
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error retrieving pending payment:", error);
-      }
-    }
-  }, [selectedBill]);
+  // Show loading state while checking user data
+  if (isUserLoading && user?.id) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="animate-pulse flex flex-col items-center space-y-4">
+          <div className="h-12 w-12 rounded-full bg-blue-200"></div>
+          <div className="h-4 w-48 rounded bg-blue-200"></div>
+          <div className="h-4 w-32 rounded bg-blue-200"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedBill) {
     return (
@@ -254,29 +201,32 @@ export default function BillsPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading || isCheckingPin}
+                  disabled={isLoading}
                 >
-                  {isLoading ? "Processing..." : 
-                   isCheckingPin ? "Checking PIN status..." : 
-                   "Pay Bill"}
+                  {isLoading ? "Processing..." : "Pay Bill"}
                 </Button>
               </form>
             </CardContent>
           </Card>
         </div>
         
-        {/* PIN Verification Modal */}
+        {/* PIN Verification/Creation Modal */}
         <Dialog open={isPinModalOpen} onOpenChange={setIsPinModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-center">Verify Payment</DialogTitle>
+              <DialogTitle className="text-center">
+                {pinMode === 'create' ? 'Create Security PIN' : 'Verify Payment'}
+              </DialogTitle>
               <DialogDescription className="text-center">
-                Enter your PIN to authorize the {selectedBill.name} bill payment of ${amount}
+                {pinMode === 'create' 
+                  ? 'Create a 6-digit PIN to secure your transactions' 
+                  : `Enter your PIN to authorize the ${selectedBill.name} bill payment of $${amount}`}
               </DialogDescription>
             </DialogHeader>
             <PinEntry 
               onSuccess={handlePinSuccess} 
               onCancel={handlePinCancel}
+              mode={pinMode}
             />
           </DialogContent>
         </Dialog>
@@ -296,7 +246,14 @@ export default function BillsPage() {
           Back
         </Button>
 
-        <h1 className="mb-8 text-2xl font-bold">Pay Bills</h1>
+        <div className="mb-8 text-center">
+          <h1 className="text-2xl font-bold">Pay Bills</h1>
+          <p className="text-gray-500 mt-2">
+            {userData && !userData.hashedPin ? 
+              "You'll need to set up a security PIN before making payments" : 
+              "Select a bill to pay"}
+          </p>
+        </div>
 
         <div className="grid w-full gap-4">
           {billTypes.map((bill) => (

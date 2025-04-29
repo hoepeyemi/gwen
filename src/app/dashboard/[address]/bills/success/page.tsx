@@ -19,7 +19,7 @@ export default function BillPaymentSuccessPage() {
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard`);
+    router.push(`/dashboard/${address}`);
   };
 
   return (
