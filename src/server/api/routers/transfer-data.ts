@@ -15,14 +15,14 @@ interface TransferDataResponse {
   updatedAt: string | Date;
 }
 
-export const stellarRouter = createTRPCRouter({
+export const transferDataRouter = createTRPCRouter({
   getAuthChallenge: publicProcedure
     .input(z.object({ publicKey: z.string() }))
     .mutation(async ({ input }) => {
-      // Mock implementation for Stellar auth challenge
+      // Mock implementation for auth challenge
       return {
         transaction: "AAAAAAAAAGQAAAAAAAAAAQAAAAAAAAABAAAAAAAAAAA=", // Mock XDR
-        network_passphrase: "Test SDF Network ; September 2015",
+        network_passphrase: "Test Network ; September 2023",
       };
     }),
 

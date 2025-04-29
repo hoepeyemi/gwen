@@ -1,59 +1,53 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, Zap, Wifi, Droplet, Phone, Tv, Flame, Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, Zap, Droplet, Wifi, Phone, Tv, Flame } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
-import PinEntry from "~/app/wallet/_components/pin";
-import { api } from "~/trpc/react";
 import { toast } from "react-hot-toast";
-
-// Add Dialog components for the PIN verification modal
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "~/components/ui/dialog";
+import { api } from "~/trpc/react";
+import PinEntry from "~/app/wallet/_components/pin";
 
 // Map bill icon strings to Lucide icons
 const getBillIcon = (iconName: string) => {
   switch (iconName) {
     case "zap":
-      return <Zap className="h-6 w-6 text-yellow-500" />;
+      return <Zap className="h-6 w-6" />;
     case "droplet":
-      return <Droplet className="h-6 w-6 text-blue-500" />;
+      return <Droplet className="h-6 w-6" />;
     case "wifi":
-      return <Wifi className="h-6 w-6 text-purple-500" />;
+      return <Wifi className="h-6 w-6" />;
     case "phone":
-      return <Phone className="h-6 w-6 text-green-500" />;
+      return <Phone className="h-6 w-6" />;
     case "tv":
-      return <Tv className="h-6 w-6 text-red-500" />;
+      return <Tv className="h-6 w-6" />;
     case "flame":
-      return <Flame className="h-6 w-6 text-orange-500" />;
+      return <Flame className="h-6 w-6" />;
     default:
-      return <Zap className="h-6 w-6 text-yellow-500" />;
+      return <Zap className="h-6 w-6" />;
   }
 };
 
 export default function BillsPage() {
-  const { address } = useParams();
-  const router = useRouter();
-  const { clickFeedback } = useHapticFeedback();
+  const [billStep, setBillStep] = useState<"select" | "details" | "verification">("select");
   const [selectedBill, setSelectedBill] = useState<any>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
+  const [address, setAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [showPinEntry, setShowPinEntry] = useState(false);
+  
+  const { clickFeedback } = useHapticFeedback();
+  const router = useRouter();
+  const params = useParams();
 
   // Get bill types from the API
-  const { data: billTypes, isLoading: isLoadingBillTypes } = api.bills.getBillTypes.useQuery();
-  
+  const { data: apiBillTypes, isLoading: isLoadingBillTypes } = api.bills.getBillTypes.useQuery();
+
   // Payment mutation
   const payBillMutation = api.bills.payBill.useMutation({
     onSuccess: (data) => {
@@ -74,7 +68,8 @@ export default function BillsPage() {
         console.error("Error saving payment details to localStorage:", error);
       }
       
-      router.push(`/wallet/${address}/bills/success`);
+      // Redirect to success page
+      router.push(`/wallet/${params.address}/bills/success`);
     },
     onError: (error) => {
       setIsLoading(false);
@@ -83,56 +78,59 @@ export default function BillsPage() {
   });
 
   const handleBack = () => {
-    clickFeedback();
-    if (selectedBill) {
-      setSelectedBill(null);
-    } else {
-      router.push(`/dashboard/${address}`);
+    if (billStep === "select") {
+      router.push(`/wallet/${params.address}`);
+    } else if (billStep === "details") {
+      setBillStep("select");
+    } else if (billStep === "verification") {
+      setBillStep("details");
     }
+    clickFeedback("soft");
   };
 
   const handleBillSelect = (bill: any) => {
-    clickFeedback();
     setSelectedBill(bill);
+    setBillStep("details");
+    clickFeedback();
   };
 
   const handlePayBill = async (e: React.FormEvent) => {
     e.preventDefault();
-    clickFeedback();
     
     if (!accountNumber || !amount) {
       toast.error("Please fill in all required fields");
       return;
     }
-    
+
     if (isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error("Please enter a valid amount");
       return;
     }
     
-    // Instead of immediately processing payment, open PIN verification modal
-    setIsPinModalOpen(true);
+    // Show PIN verification
+    setShowPinEntry(true);
   };
   
   const handlePinSuccess = async () => {
-    // PIN verified successfully, now process the payment
-    setIsPinModalOpen(false);
+    setShowPinEntry(false);
     setIsLoading(true);
+    clickFeedback("medium");
 
-    try {
-      await payBillMutation.mutateAsync({
+      try {
+        await payBillMutation.mutateAsync({
         billId: selectedBill.id,
         amount: Number(amount),
         accountNumber,
-        address: ""
-      });
-    } catch (error) {
-      // Error is handled in the mutation callbacks
+        address
+        });
+      } catch (error) {
+        // Error is handled in the mutation callbacks
     }
   };
   
   const handlePinCancel = () => {
-    setIsPinModalOpen(false);
+    setShowPinEntry(false);
+    clickFeedback("soft");
   };
 
   if (isLoadingBillTypes) {
@@ -143,29 +141,58 @@ export default function BillsPage() {
     );
   }
 
-  if (selectedBill) {
+  const billTypes = apiBillTypes || [];
+  
     return (
-      <div className="flex min-h-screen flex-col bg-gray-50 p-4">
-        <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
+    <div className="space-y-6 p-4">
+      <div className="flex items-center space-x-4">
           <Button
             onClick={handleBack}
             variant="ghost"
-            className="mb-8 self-start"
+          size="icon"
+          className="h-10 w-10 rounded-full hover:bg-blue-50"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+          <ArrowLeft className="h-5 w-5" />
           </Button>
-
-          <Card className="mb-8 w-full">
+        <h1 className="text-2xl font-bold text-blue-600">
+          {billStep === "select"
+            ? "Pay Bills"
+            : billStep === "details"
+            ? `Pay ${selectedBill?.name} Bill`
+            : "Verify Payment"}
+        </h1>
+      </div>
+      
+      {billStep === "select" && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {billTypes.map((bill) => (
+            <Card 
+              key={bill.id} 
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => handleBillSelect(bill)}
+            >
+              <CardContent className="flex items-center p-4">
+                <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                  {getBillIcon(bill.icon)}
+                </div>
+                <div>
+                  <h3 className="font-semibold">{bill.name}</h3>
+                  <p className="text-sm text-gray-600">{bill.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      
+      {billStep === "details" && selectedBill && (
+        <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {getBillIcon(selectedBill.icon)}
-                {selectedBill.name} Bill
-              </CardTitle>
-              <CardDescription>{selectedBill.description}</CardDescription>
+            <CardTitle>{selectedBill.name} Bill</CardTitle>
+            <CardDescription>Enter your account details</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handlePayBill} className="space-y-6">
+            <form onSubmit={handlePayBill} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber">Account Number</Label>
                   <Input
@@ -176,91 +203,58 @@ export default function BillsPage() {
                     required
                   />
                 </div>
+              
                 <div className="space-y-2">
                   <Label htmlFor="amount">Amount</Label>
                   <Input
                     id="amount"
-                    type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Enter amount to pay"
+                  placeholder="0.00"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
                     required
-                    min="0.01"
-                    step="0.01"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="address">Service Address (Optional)</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter service address"
                   />
                 </div>
+              
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={isLoading}
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    "Pay Bill"
-                  )}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Continue to Payment"
+                )}
                 </Button>
               </form>
             </CardContent>
           </Card>
-        </div>
-        
-        {/* PIN Verification Modal */}
-        <Dialog open={isPinModalOpen} onOpenChange={setIsPinModalOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center">Verify Payment</DialogTitle>
-              <DialogDescription className="text-center">
-                Enter your PIN to authorize the {selectedBill.name} bill payment of ${amount}
-              </DialogDescription>
-            </DialogHeader>
-            <PinEntry 
-              onSuccess={handlePinSuccess} 
-              onCancel={handlePinCancel}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex min-h-screen flex-col bg-gray-50 p-4">
-      <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
-        <Button
-          onClick={handleBack}
-          variant="ghost"
-          className="mb-8 self-start"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-
-        <h1 className="mb-8 text-2xl font-bold">Pay Bills</h1>
-
-        <div className="grid w-full gap-4">
-          {billTypes?.map((bill) => (
-            <Card
-              key={bill.id}
-              className="cursor-pointer transition-colors hover:bg-gray-50"
-              onClick={() => handleBillSelect(bill)}
-            >
-              <CardContent className="flex items-center space-x-4 p-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
-                  {getBillIcon(bill.icon)}
-                </div>
-                <div>
-                  <h3 className="font-semibold">{bill.name}</h3>
-                  <p className="text-sm text-gray-500">{bill.description}</p>
-                </div>
-              </CardContent>
+      )}
+      
+      {/* Pin Entry modal */}
+      {showPinEntry && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <Card className="w-full max-w-md">
+            <PinEntry onSuccess={handlePinSuccess} onCancel={handlePinCancel} />
             </Card>
-          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 } 

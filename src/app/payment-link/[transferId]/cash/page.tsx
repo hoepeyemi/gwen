@@ -58,7 +58,7 @@ export default function Component() {
     }
   }, [transferId]);
 
-  const transfer = api.stellar.getTransferData.useQuery(
+  const transfer = api.transferData.getTransferData.useQuery(
     {
       transferId: String(transferId),
     },

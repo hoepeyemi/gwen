@@ -129,7 +129,6 @@ export default function SendPreview({
     }
   });
   
-  // KYC mutations - replace Stellar API calls with mock implementations
   const mockKycSubmission = (data: any) => {
     console.log("Mock KYC submission:", data);
     return Promise.resolve(`mock-kyc-${Date.now()}`);

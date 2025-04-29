@@ -1,6 +1,5 @@
 import { env } from "~/env";
 
-// Mock implementations to replace Stellar dependencies
 export const generateMockId = () => {
   const randomId = Math.random().toString(36).substring(2, 15);
   return `mock-${randomId}`;

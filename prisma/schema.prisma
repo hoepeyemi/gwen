@@ -21,8 +21,6 @@ model User {
   passkeyKey        String?
   phone             String?             @unique
   AuthSession       AuthSession[]
-  HostedDeposits    HostedDeposits[]
-  HostedWithdrawals HostedWithdrawals[]
   KYC               KYC[]
   OTPVerification   OTPVerification?
   transfers         Transfer[]          @relation("UserTransfers")
@@ -42,8 +40,6 @@ model AuthSession {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   user              User                @relation(fields: [userId], references: [id])
-  HostedDeposits    HostedDeposits[]
-  HostedWithdrawals HostedWithdrawals[]
   KYC               KYC[]
 
   @@index([userId], map: "user_idx")
@@ -62,42 +58,6 @@ model KYC {
   @@index([userId], map: "kyc_user_idx")
 }
 
-model HostedDeposits {
-  id               Int          @id @default(autoincrement())
-  userId           Int
-  amount           Decimal
-  destinationAsset String
-  sourceAsset      String
-  type             String
-  transferId       String
-  authSessionId    Int?
-  AuthSession      AuthSession? @relation(fields: [authSessionId], references: [id])
-  transfer         Transfer     @relation(fields: [transferId], references: [id])
-  user             User         @relation(fields: [userId], references: [id])
-
-  @@index([userId], map: "hosted_deposits_user_idx")
-  @@index([transferId], map: "hosted_deposits_transfer_idx")
-}
-
-model HostedWithdrawals {
-  id               Int          @id @default(autoincrement())
-  userId           Int
-  amount           Decimal
-  destinationAsset String
-  sourceAsset      String
-  type             String
-  account_number   String
-  roting_number    String
-  transferId       String
-  authSessionId    Int?
-  AuthSession      AuthSession? @relation(fields: [authSessionId], references: [id])
-  transfer         Transfer     @relation(fields: [transferId], references: [id])
-  user             User         @relation(fields: [userId], references: [id])
-
-  @@index([userId], map: "hosted_withdrawals_user_idx")
-  @@index([transferId], map: "hosted_withdrawals_transfer_idx")
-}
-
 model Transfer {
   createdAt              DateTime            @default(now())
   updatedAt              DateTime            @updatedAt
@@ -113,18 +73,7 @@ model Transfer {
   senderAuthSessionId    Int?
   receiverAuthSessionId  Int?
   recipientAddress       String?
-  recipientBankName      String?
-  recipientBankAddress   String?
-  recipientAccountNumber String?
-  recipientIBAN          String?
-  recipientSWIFTBIC      String?
-  recipientRoutingNumber String?
-  recipientTransitNumber String?
-  recipientSortCode      String?
-  recipientCLABE         String?
   oTPVerificationId      Int?
-  HostedDeposits         HostedDeposits[]
-  HostedWithdrawals      HostedWithdrawals[]
   OTPVerification        OTPVerification?    @relation(fields: [oTPVerificationId], references: [id])
   sender                 User?               @relation("UserTransfers", fields: [senderId], references: [id])
 

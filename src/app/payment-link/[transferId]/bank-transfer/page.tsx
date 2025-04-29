@@ -67,7 +67,7 @@ export default function Component() {
     }
   }, [transferId]);
 
-  const transfer = api.stellar.getTransferData.useQuery(
+  const transfer = api.transferData.getTransferData.useQuery(
     {
       transferId: String(transferId),
     },
@@ -94,7 +94,7 @@ export default function Component() {
     }
   }, [transfer.data]);
 
-  const deposit = api.stellar.deposit.useMutation({
+  const deposit = api.transferData.deposit.useMutation({
     // onError: ClientTRPCErrorHandler,
     onSuccess: (data) => {
       console.log(data);

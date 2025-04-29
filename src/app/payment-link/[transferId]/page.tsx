@@ -31,7 +31,7 @@ export default function Component() {
   const searchParams = useSearchParams();
   const [transferData, setTransferData] = useState<TransferData | null>(null);
 
-  const transfer = api.stellar.getTransferData.useQuery(
+  const transfer = api.transferData.getTransferData.useQuery(
     {
       transferId: String(transferId),
     },

@@ -27,13 +27,13 @@ export const usePasskey = (identifier: string) => {
 
   const { keyId } = useKeyStore.getState();
 
-  const saveSigner = api.stellar.saveSigner.useMutation({
-    onError: ClientTRPCErrorHandler,
+  const saveSigner = api.transferData.saveSigner.useMutation({
+    onError: (err) => console.error("Error in saveSigner:", err),
   });
 
   // Initialize tRPC mutation
-  const { mutateAsync: sendTransaction, error } = api.stellar.send.useMutation({
-    onError: ClientTRPCErrorHandler,
+  const { mutateAsync: sendTransaction, error } = api.transferData.send.useMutation({
+    onError: (err) => console.error("Error in sendTransaction:", err),
   });
 
   // Create a function to handle the wallet creation process

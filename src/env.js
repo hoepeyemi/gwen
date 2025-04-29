@@ -19,7 +19,6 @@ export const env = createEnv({
     // Make all other variables optional
     ENABLE_SMS: z.string().optional(),
     SALT_ROUNDS: z.string().optional(),
-    MOCK_KYC: z.string().optional().default("false"),
   },
 
   /**
@@ -30,7 +29,6 @@ export const env = createEnv({
   client: {
     // Make all client-side variables optional
     NEXT_PUBLIC_APP_URL: z.string().url().optional(),
-    NEXT_PUBLIC_PUSHER_APP_KEY: z.string().optional(),
     NEXT_PUBLIC_CIVIC_CLIENT_ID: z.string().optional(),
   },
 
@@ -48,8 +46,6 @@ export const env = createEnv({
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-    MOCK_KYC: process.env.MOCK_KYC,
-    NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY,
     NEXT_PUBLIC_CIVIC_CLIENT_ID: process.env.NEXT_PUBLIC_CIVIC_CLIENT_ID,
   },
   /**
