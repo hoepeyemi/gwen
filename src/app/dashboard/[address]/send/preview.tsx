@@ -324,9 +324,9 @@ export default function SendPreview({
             }
             
             // Only show error in production if upload fails
-            setKycError("Could not upload your documents. Please try again later.");
-            setIsLoading(false);
-            return;
+              setKycError("Could not upload your documents. Please try again later.");
+              setIsLoading(false);
+              return;
           }
         }
         

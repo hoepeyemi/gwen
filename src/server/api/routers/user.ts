@@ -115,30 +115,4 @@ export const userRouter = createTRPCRouter({
       }
       return { success: true };
     }),
-  // Check if a user has set a PIN without validating it
-  hasPinSet: publicProcedure
-    .input(z.object({ userId: z.string().or(z.number()) }))
-    .query(async ({ ctx, input }) => {
-      try {
-        const user = await ctx.db.user.findUnique({
-          where: { id: Number(input.userId) },
-          select: { id: true, hashedPin: true }
-        });
-        
-        if (!user) {
-          return { hasPinSet: false, error: "User not found" };
-        }
-        
-        return { 
-          hasPinSet: !!user.hashedPin,
-          error: null
-        };
-      } catch (error) {
-        console.error("Error checking if user has PIN:", error);
-        return { 
-          hasPinSet: false, 
-          error: "Error checking PIN status" 
-        };
-      }
-    }),
 });

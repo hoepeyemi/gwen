@@ -6,10 +6,9 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X, Loader2 } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import PinEntry from "~/app/wallet/_components/pin";
-import { useAuth } from "~/providers/auth-provider";
 import { api } from "~/trpc/react";
 import { toast } from "react-hot-toast";
 
@@ -29,71 +28,88 @@ interface BillType {
   description: string;
 }
 
-const billTypes: BillType[] = [
-  {
-    id: "electricity",
-    name: "Electricity",
-    icon: <Zap className="h-6 w-6 text-yellow-500" />,
-    description: "Pay your electricity bills",
-  },
-  {
-    id: "water",
-    name: "Water",
-    icon: <Droplet className="h-6 w-6 text-blue-500" />,
-    description: "Pay your water utility bills",
-  },
-  {
-    id: "internet",
-    name: "Internet",
-    icon: <Wifi className="h-6 w-6 text-purple-500" />,
-    description: "Pay your internet service bills",
-  },
-  {
-    id: "phone",
-    name: "Phone",
-    icon: <Phone className="h-6 w-6 text-green-500" />,
-    description: "Pay your phone bills",
-  },
-  {
-    id: "rent",
-    name: "Rent",
-    icon: <Home className="h-6 w-6 text-orange-500" />,
-    description: "Pay your rent",
-  },
-  {
-    id: "credit",
-    name: "Credit Card",
-    icon: <CreditCard className="h-6 w-6 text-red-500" />,
-    description: "Pay your credit card bills",
-  },
-];
+// Map icon strings to Lucide components
+const getIconComponent = (iconName: string): React.ReactNode => {
+  switch (iconName) {
+    case "zap":
+      return <Zap className="h-6 w-6 text-yellow-500" />;
+    case "droplet":
+      return <Droplet className="h-6 w-6 text-blue-500" />;
+    case "wifi":
+      return <Wifi className="h-6 w-6 text-purple-500" />;
+    case "phone":
+      return <Phone className="h-6 w-6 text-green-500" />;
+    case "home":
+      return <Home className="h-6 w-6 text-orange-500" />;
+    case "credit-card":
+      return <CreditCard className="h-6 w-6 text-red-500" />;
+    default:
+      return <CreditCard className="h-6 w-6 text-gray-500" />;
+  }
+};
 
 export default function BillsPage() {
-  const { address } = useParams();
+  const { address } = useParams<{ address: string }>();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
-  const { user } = useAuth();
   const [selectedBill, setSelectedBill] = useState<BillType | null>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [pinMode, setPinMode] = useState<'create' | 'verify'>('verify');
-  
-  // Fetch user data to check if PIN is set
-  const { data: userData, isLoading: isUserLoading } = api.users.getUserById.useQuery(
-    { userId: user?.id || 0 },
-    { enabled: !!user?.id, staleTime: 5 * 60 * 1000 } // 5 minutes
-  );
+  const [billTypes, setBillTypes] = useState<BillType[]>([]);
+  const [isLoadingBills, setIsLoadingBills] = useState(true);
 
-  // Handle case when backing from a bill selection
-  const handleBack = () => {
-    if (selectedBill) {
-      setSelectedBill(null);
-    } else {
-      clickFeedback();
-      router.push(`/dashboard/${address}`);
+  // Fetch bill types using tRPC
+  const { data: billTypesData, isLoading: isBillTypesLoading, error: billTypesError } = api.bills.getBillTypes.useQuery(undefined, {
+    enabled: true, // Always fetch bills on page load
+  });
+
+  // Update state when bill types data is loaded
+  useEffect(() => {
+    if (billTypesData) {
+      // Convert API data to component's BillType format with icons
+      const formattedBillTypes = billTypesData.map(bill => ({
+        id: bill.id,
+        name: bill.name,
+        description: bill.description,
+        icon: getIconComponent(bill.icon)
+      }));
+      setBillTypes(formattedBillTypes);
+      setIsLoadingBills(false);
     }
+
+    if (billTypesError) {
+      console.error("Failed to fetch bill types:", billTypesError);
+      toast.error("Failed to load bill types");
+      setIsLoadingBills(false);
+    }
+  }, [billTypesData, billTypesError]);
+
+  // Payment mutation
+  const payBillMutation = api.bills.payBill.useMutation({
+    onSuccess: (data) => {
+      // Store transaction data in localStorage for success page
+      localStorage.setItem('lastBillPayment', JSON.stringify({
+        billType: data.billType,
+        accountNumber: data.accountNumber,
+        amount: data.amount,
+        date: data.date,
+        transactionId: data.transactionId
+      }));
+
+      // Navigate to success page
+      router.push(`/dashboard/${address}/bills/success`);
+    },
+    onError: (error) => {
+      setIsLoading(false);
+      toast.error(`Payment failed: ${error.message}`);
+    }
+  });
+
+  const handleBack = () => {
+    clickFeedback();
+    router.push(`/dashboard`);
   };
 
   const handleBillSelect = (bill: BillType) => {
@@ -105,50 +121,50 @@ export default function BillsPage() {
     e.preventDefault();
     clickFeedback();
     
-    if (!user?.id) {
-      toast.error("Please sign in to continue");
-      router.push("/auth/signin");
+    if (!selectedBill) {
+      toast.error("Please select a bill type");
       return;
     }
-    
-    // Check if user has a PIN set
-    if (userData && !userData.hashedPin) {
-      // User needs to create a PIN first
-      setPinMode('create');
-      setIsPinModalOpen(true);
-    } else {
-      // User has PIN, verify it
-      setPinMode('verify');
-      setIsPinModalOpen(true);
+
+    if (!accountNumber) {
+      toast.error("Please enter an account number");
+      return;
     }
+
+    if (!amount || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    // Open PIN verification modal
+    setIsPinModalOpen(true);
   };
   
   const handlePinSuccess = async () => {
-    // PIN verified or created successfully, now process the payment
+    // PIN verified successfully, now process the payment
     setIsPinModalOpen(false);
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    toast.success(`${selectedBill?.name} bill payment successful!`);
-    router.push(`/dashboard/${address}/bills/success`);
+    if (selectedBill) {
+      // Call the payment mutation
+      payBillMutation.mutate({
+        billTypeId: selectedBill.id,
+        accountNumber: accountNumber,
+        amount: parseFloat(amount),
+        walletAddress: address as string
+      });
+    }
   };
   
   const handlePinCancel = () => {
     setIsPinModalOpen(false);
-    toast.error("Payment cancelled");
   };
 
-  // Show loading state while checking user data
-  if (isUserLoading && user?.id) {
+  if (isLoadingBills || isBillTypesLoading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="animate-pulse flex flex-col items-center space-y-4">
-          <div className="h-12 w-12 rounded-full bg-blue-200"></div>
-          <div className="h-4 w-48 rounded bg-blue-200"></div>
-          <div className="h-4 w-32 rounded bg-blue-200"></div>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+        <p>Loading bill payment options...</p>
       </div>
     );
   }
@@ -158,7 +174,7 @@ export default function BillsPage() {
       <div className="flex min-h-screen flex-col bg-gray-50 p-4">
         <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
           <Button
-            onClick={handleBack}
+            onClick={() => setSelectedBill(null)}
             variant="ghost"
             className="mb-8 self-start"
           >
@@ -210,23 +226,18 @@ export default function BillsPage() {
           </Card>
         </div>
         
-        {/* PIN Verification/Creation Modal */}
+        {/* PIN Verification Modal */}
         <Dialog open={isPinModalOpen} onOpenChange={setIsPinModalOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-center">
-                {pinMode === 'create' ? 'Create Security PIN' : 'Verify Payment'}
-              </DialogTitle>
+              <DialogTitle className="text-center">Verify Payment</DialogTitle>
               <DialogDescription className="text-center">
-                {pinMode === 'create' 
-                  ? 'Create a 6-digit PIN to secure your transactions' 
-                  : `Enter your PIN to authorize the ${selectedBill.name} bill payment of $${amount}`}
+                Enter your PIN to authorize the {selectedBill.name} bill payment of ${amount}
               </DialogDescription>
             </DialogHeader>
             <PinEntry 
               onSuccess={handlePinSuccess} 
               onCancel={handlePinCancel}
-              mode={pinMode}
             />
           </DialogContent>
         </Dialog>
@@ -246,14 +257,7 @@ export default function BillsPage() {
           Back
         </Button>
 
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold">Pay Bills</h1>
-          <p className="text-gray-500 mt-2">
-            {userData && !userData.hashedPin ? 
-              "You'll need to set up a security PIN before making payments" : 
-              "Select a bill to pay"}
-          </p>
-        </div>
+        <h1 className="mb-8 text-2xl font-bold">Pay Bills</h1>
 
         <div className="grid w-full gap-4">
           {billTypes.map((bill) => (

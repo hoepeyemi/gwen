@@ -1,25 +1,53 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
+import { toast } from "react-hot-toast";
+
+interface BillPayment {
+  billType: string;
+  accountNumber: string;
+  amount: number;
+  date: string;
+  transactionId: string;
+}
 
 export default function BillPaymentSuccessPage() {
-  const { address } = useParams();
+  const { address } = useParams<{ address: string }>();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
+  const [paymentDetails, setPaymentDetails] = useState<BillPayment | null>(null);
 
   useEffect(() => {
-    // Simulate haptic feedback on page load
+    // Provide haptic feedback on page load
     clickFeedback();
-  }, []);
+    
+    // Get payment details from localStorage
+    try {
+      const storedPayment = localStorage.getItem('lastBillPayment');
+      if (storedPayment) {
+        const parsedPayment = JSON.parse(storedPayment);
+        setPaymentDetails(parsedPayment);
+      } else {
+        toast.error("Payment details not found");
+        // If no payment details, redirect back to dashboard after a short delay
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error("Error retrieving payment details:", error);
+      toast.error("Could not load payment details");
+    }
+  }, [clickFeedback, router]);
 
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard/${address}`);
+    router.push(`/dashboard`);
   };
 
   return (
@@ -42,25 +70,27 @@ export default function BillPaymentSuccessPage() {
           <CardContent className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500">Bill Type</span>
-              <span className="font-medium">Electricity</span>
+              <span className="font-medium">{paymentDetails?.billType || 'Unknown'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Account Number</span>
-              <span className="font-medium">1234567890</span>
+              <span className="font-medium">{paymentDetails?.accountNumber || 'Unknown'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Amount</span>
-              <span className="font-medium">$50.00</span>
+              <span className="font-medium">${paymentDetails?.amount.toFixed(2) || '0.00'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Date</span>
               <span className="font-medium">
-                {new Date().toLocaleDateString()}
+                {paymentDetails?.date 
+                  ? new Date(paymentDetails.date).toLocaleDateString() 
+                  : new Date().toLocaleDateString()}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Transaction ID</span>
-              <span className="font-medium">TRX123456789</span>
+              <span className="font-medium">{paymentDetails?.transactionId || 'Unknown'}</span>
             </div>
           </CardContent>
         </Card>
