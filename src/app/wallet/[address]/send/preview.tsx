@@ -108,18 +108,7 @@ export default function SendPreview({
     onSuccess: (data) => {
       setOtpSent(true);
       
-      // In development, always set default code for easier testing
-      const isDev = process.env.NODE_ENV === 'development';
-      if (isDev) {
-        // Always set to "000000" in development mode
-        setOtpCode("000000");
-        console.log('DEV MODE: Using default OTP code: 000000');
-      }
-      // Only use server-returned OTP if it's provided and we're not in dev mode
-      else if (typeof data === 'string' && data.length === 6) {
-        setOtpCode(data);
-      }
-      
+      // Remove auto-fill code in development mode
       toast.success("Verification code sent to your phone");
     },
     onError: (error) => {
@@ -351,11 +340,7 @@ export default function SendPreview({
       // Send OTP to the user's phone
       await sendOtpMutation.mutateAsync({ phone: phoneNumber });
       
-      // In development mode, auto-fill with 000000 for easier testing
-      if (process.env.NODE_ENV === 'development') {
-        setOtpCode("000000");
-        console.log("DEV MODE: Auto-filled OTP with default code (000000)");
-      }
+      // Remove auto-fill with 000000 for development mode
       
       // Show the OTP verification form
       setShowOtpVerification(true);
@@ -388,14 +373,7 @@ export default function SendPreview({
     clickFeedback("medium");
 
     try {
-      // In development mode, automatically accept "000000" as valid
-      if (process.env.NODE_ENV === 'development' && otpCode === '000000') {
-        console.log('Development mode: Auto-verifying OTP code');
-        // Skip actual verification and proceed
-        setIsVerified(true);
-        initializeKycVerification(); // This replaces onContinue
-        return;
-      }
+      // Remove special development mode handling
       
       // Regular verification through tRPC mutation
       await verifyOtpMutation.mutateAsync({ 
@@ -683,11 +661,6 @@ export default function SendPreview({
             </div>
             <CardDescription className="text-gray-600">
               We've sent a verification code to {phoneNumber}. Please enter it below to confirm your transfer.
-              {process.env.NODE_ENV === 'development' && (
-                <span className="block mt-2 text-blue-600 font-medium">
-                  Development mode: Use "000000" as the verification code.
-                </span>
-              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -696,11 +669,6 @@ export default function SendPreview({
                 <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center">
                   <ShieldCheck className="h-10 w-10 text-blue-600" />
                 </div>
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="absolute top-[-10px] right-[-10px] bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    DEV MODE
-                  </div>
-                )}
               </div>
               
               <div className="space-y-2">
@@ -711,7 +679,7 @@ export default function SendPreview({
                   id="otpCode"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder={process.env.NODE_ENV === 'development' ? "000000" : "Enter 6-digit code"}
+                  placeholder="Enter 6-digit code"
                   maxLength={6}
                   className="h-12 text-center text-lg tracking-widest"
                 />
@@ -727,18 +695,6 @@ export default function SendPreview({
                   {isResendingOtp ? "Sending..." : "Resend Code"}
                 </Button>
               </div>
-              
-              {process.env.NODE_ENV === 'development' && (
-                <div className="flex justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setOtpCode("000000")}
-                    className="text-blue-600 border-blue-300"
-                  >
-                    Auto-fill Test Code
-                  </Button>
-                </div>
-              )}
             </div>
 
             <Button
