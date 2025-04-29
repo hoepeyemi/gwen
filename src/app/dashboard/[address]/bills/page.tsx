@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -9,6 +9,9 @@ import { Label } from "~/components/ui/label";
 import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import PinEntry from "~/app/wallet/_components/pin";
+import { toast } from "react-hot-toast";
+import { api } from "~/trpc/react";
+import { useAuth } from "~/providers/auth-provider";
 
 // Add Dialog components for the PIN verification modal
 import {
@@ -69,18 +72,29 @@ export default function BillsPage() {
   const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
+  const { user } = useAuth();
   const [selectedBill, setSelectedBill] = useState<BillType | null>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [isCheckingPin, setIsCheckingPin] = useState(false);
+
+  // Query to check if user has a PIN set up
+  const userDetailsQuery = api.users.getUserDetails.useQuery(
+    { userId: user?.id || 0 },
+    {
+      enabled: !!user?.id, // Only run when user ID is available
+      staleTime: 60000, // Cache result for 1 minute
+    }
+  );
 
   const handleBack = () => {
     clickFeedback();
     if (selectedBill) {
       setSelectedBill(null);
     } else {
-      router.push(`/dashboard`);
+      router.push(`/dashboard/${address}`);
     }
   };
 
@@ -93,8 +107,51 @@ export default function BillsPage() {
     e.preventDefault();
     clickFeedback();
     
-    // Instead of immediately processing payment, open PIN verification modal
-    setIsPinModalOpen(true);
+    if (!user?.id) {
+      toast.error("Please sign in to continue");
+      router.push("/auth/signin");
+      return;
+    }
+    
+    setIsCheckingPin(true);
+    
+    try {
+      // Check if user has a PIN set up
+      if (userDetailsQuery.data?.hasPinSetup) {
+        // User has a PIN, show verification modal
+        setIsPinModalOpen(true);
+      } else {
+        // User needs to set up a PIN first, redirect to PIN setup
+        toast("You need to set up a PIN first", {
+          icon: '🔔',
+          style: {
+            borderRadius: '10px',
+            background: '#3b82f6',
+            color: '#fff',
+          },
+        });
+        
+        // Store current bill payment intent in sessionStorage
+        try {
+          sessionStorage.setItem("pendingBillPayment", JSON.stringify({
+            billType: selectedBill?.id,
+            accountNumber,
+            amount,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (error) {
+          console.error("Failed to store pending payment:", error);
+        }
+        
+        // Redirect to PIN setup
+        router.push("/wallet/pin-setup");
+      }
+    } catch (error) {
+      console.error("Error checking PIN status:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setIsCheckingPin(false);
+    }
   };
   
   const handlePinSuccess = async () => {
@@ -102,47 +159,52 @@ export default function BillsPage() {
     setIsPinModalOpen(false);
     setIsLoading(true);
 
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    // Clear any pending bill payment from session storage
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      // If we're using a route parameter, make sure it's valid
-      const userAddress = address || '';
-      
-      // If the address is empty or invalid, try to get it from localStorage
-      if (!userAddress || userAddress === '[address]') {
-        try {
-          const userData = localStorage.getItem("auth_user");
-          if (userData) {
-            const user = JSON.parse(userData);
-            if (user.walletAddress) {
-              // Navigate to the success page with the user's wallet address
-              router.push(`/dashboard/${user.walletAddress}/bills/success`);
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Error retrieving wallet address:", error);
-        }
-      }
-      
-      // If we get here, either use the provided address or navigate without it
-      if (userAddress && userAddress !== '[address]') {
-        router.push(`/dashboard/${userAddress}/bills/success`);
-      } else {
-        // Fallback if we couldn't get a valid address
-        router.push(`/dashboard/bills/success`);
-      }
+      sessionStorage.removeItem("pendingBillPayment");
     } catch (error) {
-      console.error("Error processing payment:", error);
-      setIsLoading(false);
-      // Show error handling here if needed
+      console.error("Error clearing pending payment:", error);
     }
+    
+    // Navigate to success page
+    router.push(`/dashboard/${address}/bills/success`);
   };
   
   const handlePinCancel = () => {
     setIsPinModalOpen(false);
   };
+
+  // Check for pending bill payment on mount
+  useEffect(() => {
+    if (!selectedBill) {
+      try {
+        const pendingPaymentStr = sessionStorage.getItem("pendingBillPayment");
+        if (pendingPaymentStr) {
+          const pendingPayment = JSON.parse(pendingPaymentStr);
+          // Find the bill type that matches the pending payment
+          const matchingBill = billTypes.find(bill => bill.id === pendingPayment.billType);
+          if (matchingBill) {
+            setSelectedBill(matchingBill);
+            setAccountNumber(pendingPayment.accountNumber || "");
+            setAmount(pendingPayment.amount || "");
+            toast("Continuing with your pending bill payment", {
+              icon: '🔔',
+              style: {
+                borderRadius: '10px',
+                background: '#3b82f6',
+                color: '#fff',
+              },
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error retrieving pending payment:", error);
+      }
+    }
+  }, [selectedBill]);
 
   if (selectedBill) {
     return (
@@ -192,9 +254,11 @@ export default function BillsPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isLoading}
+                  disabled={isLoading || isCheckingPin}
                 >
-                  {isLoading ? "Processing..." : "Pay Bill"}
+                  {isLoading ? "Processing..." : 
+                   isCheckingPin ? "Checking PIN status..." : 
+                   "Pay Bill"}
                 </Button>
               </form>
             </CardContent>

@@ -1,11 +1,13 @@
 "use client";
 
 import { type FC, useEffect, useState } from "react";
-import { Fingerprint, ScanFaceIcon, Delete, Shield } from "lucide-react";
+import { Fingerprint, ScanFaceIcon, Delete, Shield, Check } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import { useAuth } from "~/providers/auth-provider";
+import { api } from "~/trpc/react";
+import { toast } from "react-hot-toast";
 
 interface PinEntryProps {
   onSuccess: () => void;
@@ -15,6 +17,9 @@ interface PinEntryProps {
 const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [pin, setPin] = useState<string>("");
+  const [confirmPin, setConfirmPin] = useState<string>("");
+  const [isPinSetupMode, setIsPinSetupMode] = useState<boolean>(false);
+  const [isConfirming, setIsConfirming] = useState<boolean>(false);
   const [shake, setShake] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const { clickFeedback } = useHapticFeedback();
@@ -24,6 +29,68 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
     window.PublicKeyCredential !== undefined &&
     typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function"
   );
+  
+  // tRPC mutations for PIN operations
+  const setPinMutation = api.users.setPin.useMutation({
+    onSuccess: () => {
+      toast("PIN created successfully", {
+        icon: '✅',
+        style: {
+          borderRadius: '10px',
+          background: '#10b981',
+          color: '#fff',
+        },
+      });
+      setPin("");
+      setConfirmPin("");
+      setIsConfirming(false);
+      setIsPinSetupMode(false);
+      
+      // Immediately continue with success
+      onSuccess();
+    },
+    onError: (error) => {
+      setError(`Failed to set PIN: ${error.message}`);
+      setShake(true);
+      setPin("");
+      setConfirmPin("");
+      setIsConfirming(false);
+      setLoading(false);
+    }
+  });
+  
+  const validatePinMutation = api.users.validatePin.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        clickFeedback("success");
+        onSuccess();
+      } else if (data.needsSetup) {
+        // If PIN not set up yet, switch to setup mode
+        setIsPinSetupMode(true);
+        setPin("");
+        setLoading(false);
+        toast("Please set up your PIN first", {
+          icon: '🔔',
+          style: {
+            borderRadius: '10px',
+            background: '#3b82f6',
+            color: '#fff',
+          },
+        });
+      } else {
+        setError("Incorrect PIN. Please try again.");
+        setShake(true);
+        setPin("");
+        setLoading(false);
+      }
+    },
+    onError: (error) => {
+      setError(`Error: ${error.message}`);
+      setShake(true);
+      setPin("");
+      setLoading(false);
+    }
+  });
 
   // Reset shake animation
   useEffect(() => {
@@ -36,152 +103,78 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
   // Auto-validate PIN when 6 digits entered
   useEffect(() => {
     if (pin.length === 6 && !loading) {
-      validatePin();
+      if (isPinSetupMode) {
+        if (!isConfirming) {
+          // First entry of PIN setup - move to confirmation
+          setIsConfirming(true);
+          setConfirmPin(pin);
+          setPin("");
+        } else {
+          // Confirming PIN setup
+          if (pin === confirmPin) {
+            // PINs match - save to database
+            setupPin();
+          } else {
+            // PINs don't match
+            setError("PINs don't match. Please try again.");
+            setShake(true);
+            setPin("");
+            setConfirmPin("");
+            setIsConfirming(false);
+          }
+        }
+      } else {
+        // Regular PIN validation
+        validatePin();
+      }
     }
-  }, [pin, loading]);
+  }, [pin, loading, isPinSetupMode, isConfirming, confirmPin]);
 
-  const validatePin = async () => {
-    if (loading) return; // Prevent multiple validation attempts
+  // Setup a new PIN in the database
+  const setupPin = async () => {
+    if (!user || !user.id) {
+      setError("User not found. Please log in again.");
+      return;
+    }
     
     setLoading(true);
     setError(null);
     
-    // Check if we're in development mode
-    const isDev = process.env.NODE_ENV === 'development';
-    
-    // Try to get PIN from multiple sources
-    let userPin: string | null = null;
-    
-    // First, check localStorage for a directly stored PIN
     try {
-      const storedPinData = localStorage.getItem("user_pin");
-      if (storedPinData) {
-        const parsedPinData = JSON.parse(storedPinData);
-        if (parsedPinData && parsedPinData.pin) {
-          userPin = parsedPinData.pin;
-          console.log("Found PIN in direct storage");
-        }
-      }
-    } catch (err) {
-      console.error("Error retrieving PIN from direct storage:", err);
+      await setPinMutation.mutateAsync({
+        userId: user.id,
+        pin: confirmPin,
+      });
+      
+      // Success is handled in the mutation callbacks
+    } catch (error) {
+      // Error is handled in the mutation callbacks
+      console.error("Error setting up PIN:", error);
+    }
+  };
+
+  // Validate an existing PIN against the database
+  const validatePin = async () => {
+    if (loading) return; // Prevent multiple validation attempts
+    
+    if (!user || !user.id) {
+      setError("User not found. Please log in again.");
+      return;
     }
     
-    // If no PIN found yet, try to get it from auth_user in localStorage
-    if (!userPin) {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const parsedUserData = JSON.parse(userData);
-          if (parsedUserData && parsedUserData.pin) {
-            userPin = parsedUserData.pin;
-            console.log("Found PIN in auth_user storage");
-          }
-        }
-      } catch (err) {
-        console.error("Error retrieving PIN from auth_user storage:", err);
-      }
-    }
-    
-    // If still no PIN, try to refresh from server and check again
-    if (!userPin && user && user.id) {
-      try {
-        console.log("Refreshing user data to find PIN");
-        await refreshUserData(user.id);
-        
-        // After refresh, check auth_user data in localStorage again
-        // The user object from context doesn't have 'pin' property
-        const refreshedData = localStorage.getItem("auth_user");
-        if (refreshedData) {
-          const parsedRefreshedData = JSON.parse(refreshedData);
-          // Check for PIN in the refreshed data as it might contain additional fields
-          if (parsedRefreshedData && parsedRefreshedData.pin) {
-            userPin = parsedRefreshedData.pin;
-            console.log("Found PIN in refreshed auth_user data");
-          } else if (parsedRefreshedData.hashedPin) {
-            // If no direct pin field but user has completed PIN setup
-            console.log("User has hashedPin set but no stored PIN");
-          }
-        }
-      } catch (err) {
-        console.error("Error refreshing user data to find PIN:", err);
-      }
-    }
+    setLoading(true);
+    setError(null);
     
     try {
-      // Simulate server validation delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await validatePinMutation.mutateAsync({
+        userId: user.id,
+        pin: pin,
+      });
       
-      // Default demo PIN that should always work
-      const demoPin = "123456";
-      let isValid = false;
-      
-      // In development mode, always accept the demo PIN
-      if (isDev && pin === demoPin) {
-        console.log("Development mode: Accepting demo PIN (123456)");
-        isValid = true;
-      } 
-      // Also accept user's custom PIN if it exists
-      else if (userPin && pin === userPin) {
-        console.log("Validating against user's custom PIN");
-        isValid = true;
-      }
-      // If no PIN was found and we're in development, allow the first PIN entry to be set
-      else if (!userPin && isDev) {
-        console.log("Development mode: No stored PIN found, accepting entered PIN");
-        isValid = true;
-        
-        // Store this PIN for future reference
-        try {
-          localStorage.setItem("user_pin", JSON.stringify({ pin: pin, created: new Date().toISOString() }));
-          console.log("Stored entered PIN for future validation");
-        } catch (err) {
-          console.error("Failed to store PIN:", err);
-        }
-      }
-      // In production with no PIN, use a stricter approach
-      else if (!userPin) {
-        // This is a fallback that should rarely happen in production
-        isValid = pin === demoPin;
-        console.log("No stored PIN found, validating against demo PIN (123456)");
-      }
-      
-      if (isValid) {
-        clickFeedback("medium");
-        
-        // Immediately generate wallet address if not already present
-        try {
-          const userData = localStorage.getItem("auth_user");
-          if (userData) {
-            const user = JSON.parse(userData);
-            if (!user.walletAddress) {
-              // Generate a unique wallet address for the user
-              const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-              user.walletAddress = newAddress;
-              localStorage.setItem("auth_user", JSON.stringify(user));
-              console.log("Generated new wallet address on PIN validation:", newAddress);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to generate wallet address:", err);
-        }
-        
-        // Call success callback after a short delay to ensure UI updates first
-        setTimeout(() => {
-          onSuccess();
-        }, 200);
-      } else {
-        setShake(true);
-        clickFeedback("medium");
-        setError("Incorrect PIN. Please try again.");
-        setPin("");
-        setLoading(false);
-      }
-    } catch (err) {
-      setShake(true);
-      clickFeedback("medium");
-      setError("An error occurred. Please try again.");
-      setPin("");
-      setLoading(false);
+      // Success/failure is handled in the mutation callbacks
+    } catch (error) {
+      // Error is handled in the mutation callbacks
+      console.error("Error validating PIN:", error);
     }
   };
 
@@ -213,23 +206,6 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
       // For now, just simulate success after a delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Immediately generate wallet address if not already present
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (!user.walletAddress) {
-            // Generate a unique wallet address for the user
-            const newAddress = `stellar:${Math.random().toString(36).substring(2, 15)}`;
-            user.walletAddress = newAddress;
-            localStorage.setItem("auth_user", JSON.stringify(user));
-            console.log("Generated new wallet address via biometric auth:", newAddress);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to generate wallet address:", err);
-      }
-      
       onSuccess();
     } catch (err) {
       setError("Biometric authentication failed. Please use your PIN.");
@@ -245,7 +221,10 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           Gwen
         </CardTitle>
         <p className="text-center text-gray-600">
-          {loading ? "Verifying..." : "Enter your PIN"}
+          {loading ? "Verifying..." : 
+            isPinSetupMode ? 
+              (isConfirming ? "Confirm your new PIN" : "Create a new PIN") : 
+              "Enter your PIN"}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -268,6 +247,12 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
           ))}
         </div>
 
+        {isPinSetupMode && isConfirming && (
+          <div className="text-center text-sm text-blue-600">
+            <p>Enter the same PIN again to confirm</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((number) => (
             <Button
@@ -284,7 +269,7 @@ const PinEntry: FC<PinEntryProps> = ({ onSuccess, onCancel }) => {
             variant="outline"
             onClick={handleBiometric}
             className="flex h-14 items-center justify-center"
-            disabled={loading || !biometricSupported}
+            disabled={loading || !biometricSupported || isPinSetupMode}
           >
             <Fingerprint className="h-6 w-6 text-blue-500" />
           </Button>

@@ -15,52 +15,11 @@ export default function BillPaymentSuccessPage() {
   useEffect(() => {
     // Simulate haptic feedback on page load
     clickFeedback();
-    
-    // If address is missing or invalid, try to get it from localStorage
-    if (!address || address === '[address]') {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            // Replace the current URL with the correct wallet address without reloading
-            const newUrl = `/dashboard/${user.walletAddress}/bills/success`;
-            window.history.replaceState({ path: newUrl }, '', newUrl);
-          }
-        }
-      } catch (error) {
-        console.error("Error retrieving wallet address:", error);
-      }
-    }
   }, []);
 
   const handleBack = () => {
     clickFeedback();
-    
-    // Try to get the wallet address for redirection
-    let walletAddress = address;
-    
-    // If address is missing or invalid, try to get it from localStorage
-    if (!walletAddress || walletAddress === '[address]') {
-      try {
-        const userData = localStorage.getItem("auth_user");
-        if (userData) {
-          const user = JSON.parse(userData);
-          if (user.walletAddress) {
-            walletAddress = user.walletAddress;
-          }
-        }
-      } catch (error) {
-        console.error("Error retrieving wallet address:", error);
-      }
-    }
-    
-    // Navigate back to the dashboard with the wallet address if available
-    if (walletAddress && walletAddress !== '[address]') {
-      router.push(`/dashboard/${walletAddress}`);
-    } else {
-      router.push('/dashboard');
-    }
+    router.push(`/dashboard`);
   };
 
   return (
