@@ -1,9 +1,4 @@
-import base64url from "base64url";
-	import { Buffer } from "buffer";
-
-	import { Keypair } from "@stellar/stellar-sdk/minimal";
-    import { SignerStore, SignerKey, type SignerLimits, type Signer } from "passkey-kit";
-
+import { Buffer } from "buffer";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { useContractStore } from "~/hooks/stores/useContractStore";
@@ -17,6 +12,14 @@ import {
   native,
   server,
 } from "~/lib/client-helpers";
+
+// Type definitions for the passkey functionality
+type SignerStoreType = 'Temporary' | 'Permanent';
+const SignerStore = {
+  Temporary: 'Temporary' as SignerStoreType,
+  Permanent: 'Permanent' as SignerStoreType
+};
+
 export const usePasskey = (identifier: string) => {
   const [loading, setLoading] = useState(false);
   const setContractId = useContractStore((state) => state.setContractId);
@@ -66,7 +69,7 @@ export const usePasskey = (identifier: string) => {
       toast.success("Successfully created passkey wallet");
         return cid;
     } catch (err) {
-      toast.error((err as Error)?.message ?? "Failed to create Stellar passkey");
+      toast.error((err as Error)?.message ?? "Failed to create passkey wallet");
       throw err;
     } finally {
       setLoading(false);

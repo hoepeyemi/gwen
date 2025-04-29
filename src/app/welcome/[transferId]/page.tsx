@@ -30,7 +30,6 @@ import { usePasskey } from "~/hooks/usePasskey";
 import { ClientTRPCErrorHandler, parsePhoneNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import toast from "react-hot-toast";
-import { Keypair, TransactionBuilder } from "@stellar/stellar-sdk";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import ExpandingArrow from "~/components/ui/expanding-arrow";
@@ -54,7 +53,6 @@ export default function Component() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [contract, setContract] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [sep10token, setSep10token] = useState<string | null>(null);
   const [isHoveredFeature, setIsHoveredFeature] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -62,25 +60,19 @@ export default function Component() {
   const { create } = usePasskey(phoneNumber);
 
   // tRPC Procedures
-  const sep10Challenge = api.stellar.getAuthChallenge.useMutation({
-    onError: ClientTRPCErrorHandler,
-  });
-  const sep10Token = api.stellar.signAuthChallenge.useMutation({
-    onError: ClientTRPCErrorHandler,
-  });
   const newOtp = api.post.otp.useMutation({
     onError: ClientTRPCErrorHandler,
   });
   const verifyOtp = api.post.verifyOtp.useMutation({
     onError: ClientTRPCErrorHandler,
   });
-  const startAuth = api.stellar.startAuthSession.useMutation({
+  const startAuth = api.wallet.startAuthSession.useMutation({
     onError: ClientTRPCErrorHandler,
   });
-  const saveAuth = api.stellar.saveAuthSession.useMutation({
+  const saveAuth = api.wallet.saveAuthSession.useMutation({
     onError: ClientTRPCErrorHandler,
   });
-  const linkAuthSession = api.stellar.linkAuthSession.useMutation({
+  const linkAuthSession = api.wallet.linkAuthSession.useMutation({
     onError: ClientTRPCErrorHandler,
   });
   const transfer = api.transfers.getTransfer.useQuery(
@@ -103,33 +95,30 @@ export default function Component() {
       if (!userId) {
         throw new Error("Invalid user id");
       }
-      const keypair = Keypair.random();
-      const { id: sessionId } = await startAuth.mutateAsync({
-        userId: Number(userId),
-        publicKey: keypair.publicKey(),
+      
+      // Start an authentication session
+      // Using the user ID as the address since the wallet API expects an address
+      const { sessionId } = await startAuth.mutateAsync({
+        address: String(userId),
+        deviceInfo: {
+          name: "Web Browser",
+          platform: navigator.userAgent || "web",
+        }
       });
 
-      const { transaction, network_passphrase } =
-        await sep10Challenge.mutateAsync({
-          publicKey: keypair.publicKey(),
-        });
-      const tx = TransactionBuilder.fromXDR(transaction, network_passphrase);
-      tx.sign(keypair);
-      const token = await sep10Token.mutateAsync({
-        transactionXDR: tx.toXDR(),
-        networkPassphrase: network_passphrase,
-      });
-      console.log("token", token, "sessionId", sessionId);
+      // Save the authentication session
       await saveAuth.mutateAsync({
         sessionId: sessionId,
-        token,
+        userId: String(userId),
       });
+      
+      // Link the authentication session to the transfer
       await linkAuthSession.mutateAsync({
-        authSessionId: sessionId,
-        transferId: transferId as string,
-        type: isReceiver ? "receiver" : "sender",
+        sessionId: sessionId,
+        userId: String(userId),
       });
-      // Redirect to next page
+      
+      // Redirect to the next page
       window.location.href = `/kyc/${String(transferId)}?${new URLSearchParams(searchParams).toString()}`;
       return sessionId;
     } catch (e) {

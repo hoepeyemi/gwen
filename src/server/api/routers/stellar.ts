@@ -113,12 +113,12 @@ export const stellarRouter = createTRPCRouter({
       
       // Fallback to mock data
       return {
-        id: input.transferId,
+                  id: input.transferId,
         amount: 100,
         recipientName: "Jane Doe",
         recipientPhone: "+1234567890",
         currency: "USD",
-        status: "PENDING",
+                  status: "PENDING",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
