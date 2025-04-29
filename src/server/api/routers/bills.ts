@@ -1,112 +1,155 @@
 import { z } from "zod";
+
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { TRPCError } from "@trpc/server";
 
-export interface BillType {
+// In-memory storage for bill payments
+const mockBillPayments: Array<{
   id: string;
-  name: string;
-  description: string;
-  icon: string;
-}
-
-// Sample bill types that will be returned from the API
-const BILL_TYPES = [
-  {
-    id: "electricity",
-    name: "Electricity",
-    description: "Pay your electricity bills",
-    icon: "zap",
-  },
-  {
-    id: "water",
-    name: "Water",
-    description: "Pay your water utility bills",
-    icon: "droplet",
-  },
-  {
-    id: "internet",
-    name: "Internet",
-    description: "Pay your internet service bills",
-    icon: "wifi",
-  },
-  {
-    id: "phone",
-    name: "Phone",
-    description: "Pay your phone bills",
-    icon: "phone",
-  },
-  {
-    id: "rent",
-    name: "Rent",
-    description: "Pay your rent",
-    icon: "home",
-  },
-  {
-    id: "credit",
-    name: "Credit Card",
-    description: "Pay your credit card bills",
-    icon: "credit-card",
-  },
-];
+  billTypeId: string;
+  accountNumber: string;
+  amount: number;
+  userId?: number;
+  status: string;
+  paymentDate: Date;
+}> = [];
 
 export const billsRouter = createTRPCRouter({
-  // Get all available bill types
+  // Get all bill types
   getBillTypes: publicProcedure.query(async () => {
-    return BILL_TYPES;
+    // Return a static list of bill types
+    return [
+      {
+        id: "electricity",
+        name: "Electricity",
+        description: "Pay your electricity bills",
+        icon: "Zap",
+      },
+      {
+        id: "water",
+        name: "Water",
+        description: "Pay your water utility bills",
+        icon: "Droplet",
+      },
+      {
+        id: "internet",
+        name: "Internet",
+        description: "Pay your internet service bills",
+        icon: "Wifi",
+      },
+      {
+        id: "phone",
+        name: "Phone",
+        description: "Pay your phone bills",
+        icon: "Phone",
+      },
+      {
+        id: "rent",
+        name: "Rent",
+        description: "Pay your rent",
+        icon: "Home",
+      },
+      {
+        id: "credit",
+        name: "Credit Card",
+        description: "Pay your credit card bills",
+        icon: "CreditCard",
+      },
+    ];
   }),
 
-  // Get a specific bill by ID
-  getBillById: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
-      const bill = BILL_TYPES.find(bill => bill.id === input.id);
-      if (!bill) {
-        throw new Error("Bill type not found");
-      }
-      return bill;
-    }),
-
-  // Pay a bill
+  // Submit a bill payment
   payBill: publicProcedure
     .input(
       z.object({
         billTypeId: z.string(),
         accountNumber: z.string(),
         amount: z.number().positive(),
-        walletAddress: z.string().optional(),
-      })
+        userId: z.number().optional(),
+      }),
     )
-    .mutation(async ({ input, ctx }) => {
-      // In a real app, we would process the payment here
-      // For now, we'll just return a mock transaction
-      const billType = BILL_TYPES.find(bill => bill.id === input.billTypeId);
-      if (!billType) {
-        throw new Error("Bill type not found");
-      }
+    .mutation(async ({ input }) => {
+      try {
+        // Create a mock bill payment record
+        const paymentId = `bill_${Date.now()}`;
+        
+        const billPayment = {
+          id: paymentId,
+          billTypeId: input.billTypeId,
+          accountNumber: input.accountNumber,
+          amount: input.amount,
+          userId: input.userId,
+          status: "completed",
+          paymentDate: new Date(),
+        };
+        
+        // Store in our in-memory array
+        mockBillPayments.push(billPayment);
+        
+        console.log("Bill payment saved to in-memory storage", billPayment);
 
-      // Create transaction in the database
-      // This mock implementation just returns a fake transaction ID
-      const transactionId = `TRX${Math.floor(Math.random() * 1000000000)}`;
-      
-      return {
-        success: true,
-        transactionId,
-        amount: input.amount,
-        accountNumber: input.accountNumber,
-        billType: billType.name,
-        date: new Date().toISOString(),
-      };
+        // Return the payment information
+        return {
+          success: true,
+          paymentId: paymentId,
+          message: `Successfully paid ${input.billTypeId} bill of $${input.amount.toFixed(2)}`,
+        };
+      } catch (error) {
+        console.error("Bill payment error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process bill payment. Please try again.",
+          cause: error,
+        });
+      }
     }),
 
-  // Verify a bill payment
-  verifyBillPayment: publicProcedure
-    .input(z.object({ transactionId: z.string() }))
+  // Get bill payment history for a user
+  getPaymentHistory: publicProcedure
+    .input(
+      z.object({
+        userId: z.number().optional(),
+        limit: z.number().min(1).max(100).default(10),
+        cursor: z.string().optional(), // For pagination
+      }),
+    )
     .query(async ({ input }) => {
-      // Mock verification - in a real app, we would check the database
-      return {
-        success: true,
-        transactionId: input.transactionId,
-        status: "completed",
-        verificationTime: new Date().toISOString(),
-      };
+      try {
+        // Filter and sort the in-memory payments
+        const filteredPayments = mockBillPayments
+          .filter(payment => !input.userId || payment.userId === input.userId)
+          .sort((a, b) => b.paymentDate.getTime() - a.paymentDate.getTime());
+          
+        // Handle pagination
+        let startIndex = 0;
+        if (input.cursor) {
+          const cursorIndex = filteredPayments.findIndex(payment => payment.id === input.cursor);
+          if (cursorIndex !== -1) {
+            startIndex = cursorIndex + 1;
+          }
+        }
+        
+        const payments = filteredPayments.slice(startIndex, startIndex + input.limit + 1);
+
+        let nextCursor: string | undefined = undefined;
+        if (payments.length > input.limit) {
+          const nextItem = payments.pop();
+          if (nextItem) {
+            nextCursor = nextItem.id;
+          }
+        }
+
+        return {
+          items: payments,
+          nextCursor,
+        };
+      } catch (error) {
+        console.error("Get bill payment history error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to retrieve bill payment history.",
+          cause: error,
+        });
+      }
     }),
 }); 

@@ -6,11 +6,12 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X, Loader2 } from "lucide-react";
+import { ArrowLeft, CreditCard, Home, Zap, Wifi, Droplet, Phone, X } from "lucide-react";
 import { useHapticFeedback } from "~/hooks/useHapticFeedback";
 import PinEntry from "~/app/wallet/_components/pin";
 import { api } from "~/trpc/react";
 import { toast } from "react-hot-toast";
+import { useAuth } from "~/providers/auth-provider";
 
 // Add Dialog components for the PIN verification modal
 import {
@@ -28,88 +29,71 @@ interface BillType {
   description: string;
 }
 
-// Map icon strings to Lucide components
-const getIconComponent = (iconName: string): React.ReactNode => {
-  switch (iconName) {
-    case "zap":
-      return <Zap className="h-6 w-6 text-yellow-500" />;
-    case "droplet":
-      return <Droplet className="h-6 w-6 text-blue-500" />;
-    case "wifi":
-      return <Wifi className="h-6 w-6 text-purple-500" />;
-    case "phone":
-      return <Phone className="h-6 w-6 text-green-500" />;
-    case "home":
-      return <Home className="h-6 w-6 text-orange-500" />;
-    case "credit-card":
-      return <CreditCard className="h-6 w-6 text-red-500" />;
-    default:
-      return <CreditCard className="h-6 w-6 text-gray-500" />;
-  }
+// Map icon strings to React components
+const iconMap = {
+  "Zap": <Zap className="h-6 w-6 text-yellow-500" />,
+  "Droplet": <Droplet className="h-6 w-6 text-blue-500" />,
+  "Wifi": <Wifi className="h-6 w-6 text-purple-500" />,
+  "Phone": <Phone className="h-6 w-6 text-green-500" />,
+  "Home": <Home className="h-6 w-6 text-orange-500" />,
+  "CreditCard": <CreditCard className="h-6 w-6 text-red-500" />
 };
 
 export default function BillsPage() {
-  const { address } = useParams<{ address: string }>();
+  const { address } = useParams();
   const router = useRouter();
   const { clickFeedback } = useHapticFeedback();
+  const { user } = useAuth();
   const [selectedBill, setSelectedBill] = useState<BillType | null>(null);
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [billTypes, setBillTypes] = useState<BillType[]>([]);
-  const [isLoadingBills, setIsLoadingBills] = useState(true);
 
-  // Fetch bill types using tRPC
-  const { data: billTypesData, isLoading: isBillTypesLoading, error: billTypesError } = api.bills.getBillTypes.useQuery(undefined, {
-    enabled: true, // Always fetch bills on page load
-  });
-
-  // Update state when bill types data is loaded
-  useEffect(() => {
-    if (billTypesData) {
-      // Convert API data to component's BillType format with icons
-      const formattedBillTypes = billTypesData.map(bill => ({
-        id: bill.id,
-        name: bill.name,
-        description: bill.description,
-        icon: getIconComponent(bill.icon)
-      }));
-      setBillTypes(formattedBillTypes);
-      setIsLoadingBills(false);
-    }
-
-    if (billTypesError) {
-      console.error("Failed to fetch bill types:", billTypesError);
-      toast.error("Failed to load bill types");
-      setIsLoadingBills(false);
-    }
-  }, [billTypesData, billTypesError]);
+  // Get bill types from the API
+  const { data: apiBillTypes, isLoading: isLoadingBillTypes } = api.bills.getBillTypes.useQuery();
 
   // Payment mutation
   const payBillMutation = api.bills.payBill.useMutation({
     onSuccess: (data) => {
-      // Store transaction data in localStorage for success page
-      localStorage.setItem('lastBillPayment', JSON.stringify({
-        billType: data.billType,
-        accountNumber: data.accountNumber,
-        amount: data.amount,
-        date: data.date,
-        transactionId: data.transactionId
-      }));
-
-      // Navigate to success page
+      // Save payment details to localStorage for the success page
+      try {
+        localStorage.setItem("lastBillPayment", JSON.stringify({
+          billTypeId: selectedBill?.id || "",
+          billTypeName: selectedBill?.name || "",
+          accountNumber: accountNumber,
+          amount: parseFloat(amount),
+          date: new Date().toISOString(),
+          paymentId: data.paymentId || `TRX${Date.now().toString().slice(-9)}`
+        }));
+      } catch (error) {
+        console.error("Error saving payment details to localStorage:", error);
+      }
+      
+      toast.success(data.message || "Bill payment successful!");
       router.push(`/dashboard/${address}/bills/success`);
     },
     onError: (error) => {
+      toast.error(error.message || "Failed to process payment");
       setIsLoading(false);
-      toast.error(`Payment failed: ${error.message}`);
     }
   });
 
+  useEffect(() => {
+    if (apiBillTypes) {
+      // Convert API bill types to our BillType format with proper icons
+      const formattedBillTypes = apiBillTypes.map(bill => ({
+        ...bill,
+        icon: iconMap[bill.icon as keyof typeof iconMap] || <CreditCard className="h-6 w-6 text-gray-500" />
+      }));
+      setBillTypes(formattedBillTypes);
+    }
+  }, [apiBillTypes]);
+
   const handleBack = () => {
     clickFeedback();
-    router.push(`/dashboard`);
+    router.push(`/dashboard/${address}`);
   };
 
   const handleBillSelect = (bill: BillType) => {
@@ -121,12 +105,8 @@ export default function BillsPage() {
     e.preventDefault();
     clickFeedback();
     
-    if (!selectedBill) {
-      toast.error("Please select a bill type");
-      return;
-    }
-
-    if (!accountNumber) {
+    // Validate inputs
+    if (!accountNumber.trim()) {
       toast.error("Please enter an account number");
       return;
     }
@@ -135,7 +115,7 @@ export default function BillsPage() {
       toast.error("Please enter a valid amount");
       return;
     }
-
+    
     // Open PIN verification modal
     setIsPinModalOpen(true);
   };
@@ -146,13 +126,17 @@ export default function BillsPage() {
     setIsLoading(true);
 
     if (selectedBill) {
-      // Call the payment mutation
-      payBillMutation.mutate({
-        billTypeId: selectedBill.id,
-        accountNumber: accountNumber,
-        amount: parseFloat(amount),
-        walletAddress: address as string
-      });
+      try {
+        await payBillMutation.mutateAsync({
+          billTypeId: selectedBill.id,
+          accountNumber: accountNumber,
+          amount: parseFloat(amount),
+          userId: user?.id
+        });
+      } catch (error) {
+        // Error is handled in the mutation callbacks
+        console.error("Payment error:", error);
+      }
     }
   };
   
@@ -160,11 +144,13 @@ export default function BillsPage() {
     setIsPinModalOpen(false);
   };
 
-  if (isLoadingBills || isBillTypesLoading) {
+  if (isLoadingBillTypes) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
-        <p>Loading bill payment options...</p>
+      <div className="flex min-h-screen flex-col bg-gray-50 p-4">
+        <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
+          <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading bill types...</p>
+        </div>
       </div>
     );
   }
@@ -174,7 +160,7 @@ export default function BillsPage() {
       <div className="flex min-h-screen flex-col bg-gray-50 p-4">
         <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center">
           <Button
-            onClick={() => setSelectedBill(null)}
+            onClick={handleBack}
             variant="ghost"
             className="mb-8 self-start"
           >
