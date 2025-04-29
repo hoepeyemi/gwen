@@ -216,9 +216,9 @@ function DashboardContent() {
 
   // Show loading spinner while verifying
   if (isVerifying) {
-    return <div className="flex flex-col items-center justify-center p-8">
-      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
-      <p>Verifying security...</p>
+    return <div className="flex flex-col items-center justify-center p-4 sm:p-8">
+      <div className="animate-spin h-6 w-6 sm:h-8 sm:w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-3 sm:mb-4"></div>
+      <p className="text-sm sm:text-base">Verifying security...</p>
     </div>;
   }
   
@@ -232,20 +232,20 @@ function DashboardContent() {
       router.replace("/auth/pin?redirectTo=/dashboard?pinVerified=true");
     }, 100);
     
-    return <div className="flex flex-col items-center justify-center p-8">
-      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
-      <p>Redirecting to PIN verification...</p>
+    return <div className="flex flex-col items-center justify-center p-4 sm:p-8">
+      <div className="animate-spin h-6 w-6 sm:h-8 sm:w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-3 sm:mb-4"></div>
+      <p className="text-sm sm:text-base">Redirecting to PIN verification...</p>
     </div>;
   }
 
   // If no user is signed in, show a message
   if (!user && !userData) {
     return (
-      <div className="container mt-10 max-w-md mx-auto text-center">
+      <div className="container mt-6 sm:mt-10 max-w-md mx-auto text-center px-4">
         <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
-            <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
+          <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-6">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2">Not Signed In</h2>
+            <p className="text-sm text-gray-600 mb-4">Please sign in to view your dashboard</p>
             <Button onClick={() => router.push("/auth/signin")}>
               Sign In
             </Button>
@@ -257,35 +257,35 @@ function DashboardContent() {
 
   return (
     <div className="container px-4 py-4 mx-auto max-w-md">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+      <div className="mb-4 sm:mb-6 flex items-center justify-between">
+        <h1 className="text-xl sm:text-3xl font-bold tracking-tight">
           Welcome, {userData?.firstName || userData?.name?.split(' ')[0] || "User"}
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <UserButton />
           <Button size="sm" variant="ghost" onClick={handleSignOut}>
             Sign Out
           </Button>
         </div>
-        </div>
+      </div>
 
       {/* User Profile Card */}
       <Card className="mb-4 overflow-hidden bg-blue-600 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center mb-4">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center mb-3 sm:mb-4">
             {userData?.picture ? (
               <img 
                 src={userData.picture} 
                 alt="Profile" 
-                className="h-12 w-12 rounded-full mr-4 object-cover border-2 border-blue-300"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full mr-3 sm:mr-4 object-cover border-2 border-blue-300"
               />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center mr-4 border-2 border-blue-300">
-                <User className="h-6 w-6 text-white" />
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-blue-500 flex items-center justify-center mr-3 sm:mr-4 border-2 border-blue-300">
+                <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
             )}
             <div>
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-base sm:text-lg font-semibold text-white">
                 {userData?.name || "Welcome!"}
               </h2>
               {userData?.email && (
@@ -297,7 +297,7 @@ function DashboardContent() {
           <div className="space-y-1">
             <h2 className="text-sm font-medium text-blue-100">Current Balance</h2>
             <div className="flex items-center gap-2">
-              <p className="text-3xl font-bold">
+              <p className="text-2xl sm:text-3xl font-bold">
                 ${showBalance ? balance : "••••••"}
               </p>
               <button 
@@ -313,10 +313,10 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-2">
+          <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-2">
             <Button 
               variant="outline" 
-              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 py-1 sm:py-2 px-2 sm:px-3 h-auto text-xs sm:text-sm"
               disabled={!walletAddress}
               onClick={() => {
                 if (walletAddress) {
@@ -326,28 +326,28 @@ function DashboardContent() {
                 }
               }}
             >
-              <ArrowUpRight className="mr-2 h-4 w-4" />
+              <ArrowUpRight className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               Send
             </Button>
             <Button 
               variant="outline" 
-              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 py-1 sm:py-2 px-2 sm:px-3 h-auto text-xs sm:text-sm"
               onClick={handleReceive}
             >
-              <ArrowDownToLine className="mr-2 h-4 w-4" />
+              <ArrowDownToLine className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               Receive
             </Button>
           </div>
           
           {walletAddress && (
-            <div className="mt-4 text-center text-sm text-blue-100">
+            <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-blue-100">
               Wallet Address: {shortenAddress(walletAddress)}
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 mb-6">
+      <div className="grid gap-3 sm:gap-4 mb-5 sm:mb-6">
         <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={() => {
           if (walletAddress) {
             router.push(`/wallet/${walletAddress}/send`);
@@ -355,79 +355,79 @@ function DashboardContent() {
             toast.error("No wallet address found");
           }
         }}>
-          <CardContent className="flex items-center space-x-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-              <ArrowUpRight className="h-6 w-6 text-blue-600" />
+          <CardContent className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-blue-100">
+              <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Send Money</h3>
-              <p className="text-sm text-gray-500">Transfer money to other users</p>
+              <h3 className="font-semibold text-sm sm:text-base">Send Money</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Transfer money to other users</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handlePayBills}>
-          <CardContent className="flex items-center space-x-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Receipt className="h-6 w-6 text-green-600" />
+          <CardContent className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-green-100">
+              <Receipt className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Pay Bills</h3>
-              <p className="text-sm text-gray-500">Pay your utility bills and more</p>
+              <h3 className="font-semibold text-sm sm:text-base">Pay Bills</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Pay your utility bills and more</p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer transition-colors hover:bg-gray-50" onClick={handleReceive}>
-          <CardContent className="flex items-center space-x-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100">
-              <ArrowDownToLine className="h-6 w-6 text-purple-600" />
+          <CardContent className="flex items-center space-x-3 sm:space-x-4 p-3 sm:p-4">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-purple-100">
+              <ArrowDownToLine className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="font-semibold">Receive Money</h3>
-              <p className="text-sm text-gray-500">Get paid by other users</p>
+              <h3 className="font-semibold text-sm sm:text-base">Receive Money</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Get paid by other users</p>
             </div>
           </CardContent>
         </Card>
-            </div>
+      </div>
 
       <Tabs defaultValue="transactions">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="banking">Banking</TabsTrigger>
+          <TabsTrigger value="transactions" className="text-xs sm:text-sm">Transactions</TabsTrigger>
+          <TabsTrigger value="banking" className="text-xs sm:text-sm">Banking</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="transactions" className="space-y-4 pt-4">
+        <TabsContent value="transactions" className="space-y-3 sm:space-y-4 pt-3 sm:pt-4">
           {transactions.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-8 text-center">
-              <p className="text-gray-500">No transactions yet</p>
+            <div className="rounded-lg border border-dashed p-6 sm:p-8 text-center">
+              <p className="text-sm sm:text-base text-gray-500">No transactions yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {transactions.map((tx) => (
                 <Card key={tx.id} className="overflow-hidden">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 sm:p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === "receive" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full ${tx.type === "receive" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
                           {tx.type === "receive" ? (
-                            <ArrowDown className="h-5 w-5" />
+                            <ArrowDown className="h-4 w-4 sm:h-5 sm:w-5" />
                           ) : (
-                            <ArrowUp className="h-5 w-5" />
+                            <ArrowUp className="h-4 w-4 sm:h-5 sm:w-5" />
                           )}
                         </div>
                         <div>
-                          <p className="font-medium">{tx.recipient}</p>
+                          <p className="font-medium text-sm sm:text-base">{tx.recipient}</p>
                           <p className="text-xs text-gray-500">
                             {new Date(tx.date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <p className={`font-semibold ${tx.type === "receive" ? "text-green-600" : "text-red-600"}`}>
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <p className={`font-semibold text-sm sm:text-base ${tx.type === "receive" ? "text-green-600" : "text-red-600"}`}>
                           {tx.type === "receive" ? "+" : "-"}${tx.amount}
                         </p>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
                       </div>
                     </div>
                   </CardContent>
@@ -437,17 +437,17 @@ function DashboardContent() {
           )}
         </TabsContent>
         
-        <TabsContent value="banking" className="space-y-4 pt-4">
+        <TabsContent value="banking" className="space-y-4 pt-3 sm:pt-4">
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-4">
-                <p className="text-lg font-medium">Connect your bank account</p>
-                <p className="text-sm text-gray-500">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <div className="mb-3 sm:mb-4">
+                <p className="text-base sm:text-lg font-medium">Connect your bank account</p>
+                <p className="text-xs sm:text-sm text-gray-500">
                   Link your bank for faster transfers and withdrawals
                 </p>
               </div>
               <Button 
-                className="w-full"
+                className="w-full text-sm"
                 onClick={handleConnectBank}
               >
                 Connect Bank
@@ -463,11 +463,11 @@ function DashboardContent() {
 // Loading fallback component
 function DashboardLoading() {
   return (
-    <div className="container mt-10 max-w-7xl mx-auto">
-      <div className="flex flex-col space-y-4 animate-pulse">
-        <div className="h-16 bg-gray-200 rounded-lg"></div>
-        <div className="h-64 bg-gray-200 rounded-lg"></div>
-        <div className="h-32 bg-gray-200 rounded-lg"></div>
+    <div className="container mt-6 sm:mt-10 max-w-md mx-auto px-4">
+      <div className="flex flex-col space-y-3 sm:space-y-4 animate-pulse">
+        <div className="h-12 sm:h-16 bg-gray-200 rounded-lg"></div>
+        <div className="h-48 sm:h-64 bg-gray-200 rounded-lg"></div>
+        <div className="h-24 sm:h-32 bg-gray-200 rounded-lg"></div>
       </div>
     </div>
   );
