@@ -263,9 +263,9 @@ function DashboardContent() {
         </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <UserButton />
-          <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-xs sm:text-sm">
+          {/* <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-xs sm:text-sm">
             Sign Out
-          </Button>
+          </Button> */}
         </div>
       </div>
 
