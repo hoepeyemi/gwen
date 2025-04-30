@@ -31,7 +31,7 @@ const config = {
 };
 
 const withCivicAuth = createCivicAuthPlugin({
-  clientId: process.env.CIVIC_CLIENT_ID || ""
+  clientId: process.env.CIVIC_CLIENT_ID || "8aa2352c-357e-45b9-8044-2e71bca664bf"
 });
 
 export default withCivicAuth(config);
