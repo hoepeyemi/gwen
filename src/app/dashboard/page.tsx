@@ -216,9 +216,9 @@ function DashboardContent() {
 
   // Show loading spinner while verifying
   if (isVerifying) {
-    return <div className="flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="animate-spin h-6 w-6 sm:h-8 sm:w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-3 sm:mb-4"></div>
-      <p className="text-sm sm:text-base">Verifying security...</p>
+    return <div className="flex flex-col items-center justify-center p-8">
+      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
+      <p>Verifying security...</p>
     </div>;
   }
   
@@ -232,20 +232,20 @@ function DashboardContent() {
       router.replace("/auth/pin?redirectTo=/dashboard?pinVerified=true");
     }, 100);
     
-    return <div className="flex flex-col items-center justify-center p-4 sm:p-8">
-      <div className="animate-spin h-6 w-6 sm:h-8 sm:w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-3 sm:mb-4"></div>
-      <p className="text-sm sm:text-base">Redirecting to PIN verification...</p>
+    return <div className="flex flex-col items-center justify-center p-8">
+      <div className="animate-spin h-8 w-8 border-4 border-blue-600 rounded-full border-t-transparent mb-4"></div>
+      <p>Redirecting to PIN verification...</p>
     </div>;
   }
 
   // If no user is signed in, show a message
   if (!user && !userData) {
     return (
-      <div className="container mt-6 sm:mt-10 max-w-md mx-auto text-center px-4">
+      <div className="container mt-10 max-w-md mx-auto text-center">
         <Card>
-          <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 pb-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-2">Not Signed In</h2>
-            <p className="text-sm text-gray-600 mb-4">Please sign in to view your dashboard</p>
+          <CardContent className="pt-6">
+            <h2 className="text-xl font-semibold mb-2">Not Signed In</h2>
+            <p className="text-gray-600 mb-4">Please sign in to view your dashboard</p>
             <Button onClick={() => router.push("/auth/signin")}>
               Sign In
             </Button>
@@ -256,14 +256,14 @@ function DashboardContent() {
   }
 
   return (
-    <div className="container px-4 py-4 mx-auto max-w-md">
+    <div className="container px-4 py-4 sm:py-6 mx-auto max-w-md">
       <div className="mb-4 sm:mb-6 flex items-center justify-between">
         <h1 className="text-xl sm:text-3xl font-bold tracking-tight">
           Welcome, {userData?.firstName || userData?.name?.split(' ')[0] || "User"}
         </h1>
         <div className="flex items-center gap-1 sm:gap-2">
           <UserButton />
-          <Button size="sm" variant="ghost" onClick={handleSignOut}>
+          <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-xs sm:text-sm">
             Sign Out
           </Button>
         </div>
@@ -272,7 +272,7 @@ function DashboardContent() {
       {/* User Profile Card */}
       <Card className="mb-4 overflow-hidden bg-blue-600 text-white">
         <CardContent className="p-4 sm:p-6">
-          <div className="flex items-center mb-3 sm:mb-4">
+          <div className="flex items-center mb-4">
             {userData?.picture ? (
               <img 
                 src={userData.picture} 
@@ -289,7 +289,7 @@ function DashboardContent() {
                 {userData?.name || "Welcome!"}
               </h2>
               {userData?.email && (
-                <p className="text-xs text-blue-200">{userData.email}</p>
+                <p className="text-xs text-blue-200 truncate max-w-[180px] sm:max-w-[220px]">{userData.email}</p>
               )}
             </div>
           </div>
@@ -316,7 +316,7 @@ function DashboardContent() {
           <div className="mt-4 sm:mt-6 grid grid-cols-2 gap-2">
             <Button 
               variant="outline" 
-              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 py-1 sm:py-2 px-2 sm:px-3 h-auto text-xs sm:text-sm"
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 text-xs sm:text-sm py-1 h-auto sm:h-9"
               disabled={!walletAddress}
               onClick={() => {
                 if (walletAddress) {
@@ -331,7 +331,7 @@ function DashboardContent() {
             </Button>
             <Button 
               variant="outline" 
-              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 py-1 sm:py-2 px-2 sm:px-3 h-auto text-xs sm:text-sm"
+              className="bg-blue-500 text-white hover:bg-blue-400 border-blue-400 text-xs sm:text-sm py-1 h-auto sm:h-9"
               onClick={handleReceive}
             >
               <ArrowDownToLine className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
@@ -341,7 +341,9 @@ function DashboardContent() {
           
           {walletAddress && (
             <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-blue-100">
-              Wallet Address: {shortenAddress(walletAddress)}
+              <span className="hidden sm:inline">Wallet Address:</span> 
+              <span className="sm:hidden">Address:</span> 
+              {shortenAddress(walletAddress)}
             </div>
           )}
         </CardContent>
@@ -417,14 +419,14 @@ function DashboardContent() {
                           )}
                         </div>
                         <div>
-                          <p className="font-medium text-sm sm:text-base">{tx.recipient}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="font-medium text-xs sm:text-sm">{tx.recipient}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500">
                             {new Date(tx.date).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 sm:gap-2">
-                        <p className={`font-semibold text-sm sm:text-base ${tx.type === "receive" ? "text-green-600" : "text-red-600"}`}>
+                        <p className={`font-semibold text-xs sm:text-sm ${tx.type === "receive" ? "text-green-600" : "text-red-600"}`}>
                           {tx.type === "receive" ? "+" : "-"}${tx.amount}
                         </p>
                         <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
@@ -463,11 +465,11 @@ function DashboardContent() {
 // Loading fallback component
 function DashboardLoading() {
   return (
-    <div className="container mt-6 sm:mt-10 max-w-md mx-auto px-4">
-      <div className="flex flex-col space-y-3 sm:space-y-4 animate-pulse">
-        <div className="h-12 sm:h-16 bg-gray-200 rounded-lg"></div>
-        <div className="h-48 sm:h-64 bg-gray-200 rounded-lg"></div>
-        <div className="h-24 sm:h-32 bg-gray-200 rounded-lg"></div>
+    <div className="container mt-10 max-w-7xl mx-auto">
+      <div className="flex flex-col space-y-4 animate-pulse">
+        <div className="h-16 bg-gray-200 rounded-lg"></div>
+        <div className="h-64 bg-gray-200 rounded-lg"></div>
+        <div className="h-32 bg-gray-200 rounded-lg"></div>
       </div>
     </div>
   );
