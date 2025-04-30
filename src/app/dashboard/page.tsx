@@ -261,12 +261,7 @@ function DashboardContent() {
         <h1 className="text-xl sm:text-3xl font-bold tracking-tight">
           Welcome, {userData?.firstName || userData?.name?.split(' ')[0] || "User"}
         </h1>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <UserButton />
-          {/* <Button size="sm" variant="ghost" onClick={handleSignOut} className="text-xs sm:text-sm">
-            Sign Out
-          </Button> */}
-        </div>
+        <UserButton />
       </div>
 
       {/* User Profile Card */}
@@ -289,7 +284,7 @@ function DashboardContent() {
                 {userData?.name || "Welcome!"}
               </h2>
               {userData?.email && (
-                <p className="text-xs text-blue-200 truncate max-w-[180px] sm:max-w-[220px]">{userData.email}</p>
+                <p className="text-xs text-blue-200 truncate max-w-[200px] sm:max-w-[260px]">{userData.email}</p>
               )}
             </div>
           </div>
@@ -303,6 +298,7 @@ function DashboardContent() {
               <button 
                 onClick={toggleBalanceVisibility}
                 className="rounded-full p-1 hover:bg-blue-500"
+                aria-label={showBalance ? "Hide balance" : "Show balance"}
               >
                 {showBalance ? (
                   <EyeOff className="h-4 w-4 text-blue-100" />
@@ -449,7 +445,7 @@ function DashboardContent() {
                 </p>
               </div>
               <Button 
-                className="w-full text-sm"
+                className="w-full text-xs sm:text-sm h-9 sm:h-10"
                 onClick={handleConnectBank}
               >
                 Connect Bank
